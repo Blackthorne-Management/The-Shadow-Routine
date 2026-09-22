@@ -1,0 +1,86 @@
+# The Shadow Routine
+
+Installable PWA for the Shadow Routine accountability pilot: daily one-question-at-a-time check-ins,
+weighted weekly scoring, a live leaderboard, and a punishment/proof system with an admin dashboard.
+
+**Stack:** Vite + React + TypeScript · Supabase (Postgres, Auth, Realtime, Storage, Edge Functions, pg_cron) · Netlify · Web Push (VAPID)
+
+## How it fits together
+
+| Piece | Where |
+|---|---|
+| Schema, row-level security, storage bucket | `supabase/migrations/…01_schema.sql` |
+| Signup/invite redemption, check-ins, scoring engine, punishments | `supabase/migrations/…02_logic.sql` |
+| Placeholder punishment library, bonus presets, weekly/daily cron jobs | `supabase/migrations/…03_seed_and_cron.sql` |
+| Push reminder sender (runs every 5 min) | `supabase/functions/send-reminders/` + `supabase/sql/schedule_reminders.sql` |
+| Service worker (offline shell + push) and manifest | `public/sw.js`, `public/manifest.webmanifest` |
+| App | `src/` (participant pages in `pages/`, admin in `pages/admin/`) |
+
+Rules that matter for fairness run **in Postgres**, not the browser:
+
+- **Invite codes** are redeemed atomically in a trigger on `auth.users`. A bad or used code blocks account creation.
+- **Check-ins** go through `submit_checkin()`, which always writes to the participant's *local today*. Re-submitting the same day overwrites it (same-day edits), and past days can't be written.
+- **Scoring** (`compute_week()`) re-runs on every check-in, so the leaderboard is live all week. The formula: `min(actual/target, 1) × category max` per category, green ≥80% / gray 60–79% / red <60%, bonus 7 each capped at 49. Ties go to whoever has more green categories.
+- **Finalization** (`finalize_week()`) runs Mondays at 12:00 UTC via pg_cron. It locks the week and creates a punishment for every red band. Anyone activated partway through the week is exempt that week.
+- **Infractions:** a rejected proof logs #1 (a warning, and the participant sees a "talk to your mentor" notice). #2 surfaces a manual **Remove participant** button for the admin.
+
+## Setup
+
+### 1. Supabase
+
+1. Create a project at [supabase.com](https://supabase.com).
+2. **Database → Extensions:** enable `pg_cron` and `pg_net`.
+3. Apply the migrations in order. You can paste each file from `supabase/migrations/` into the SQL editor, or use the CLI:
+   ```bash
+   npx supabase link --project-ref YOUR-REF
+   npx supabase db push
+   ```
+4. **Authentication → URL Configuration:** set Site URL to your Netlify URL.
+   **Authentication → Providers → Email:** choose whether to require email confirmation. Either works, and the join screen handles both.
+5. Create your admin account by following `supabase/sql/bootstrap_admin.sql`: mint a code, sign up in the app, then promote yourself.
+
+### 2. Push notifications
+
+```bash
+npm run vapid
+```
+
+That prints a public/private key pair. Then:
+
+```bash
+npx supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... VAPID_SUBJECT=mailto:you@example.com CRON_SECRET=some-long-random-string
+npx supabase functions deploy send-reminders --no-verify-jwt
+```
+
+Finally, edit the two placeholders in `supabase/sql/schedule_reminders.sql` (project URL + the same `CRON_SECRET`) and run it once in the SQL editor.
+
+### 3. Netlify
+
+Connect the GitHub repo. `netlify.toml` already sets the build. Add these environment variables:
+
+```
+VITE_SUPABASE_URL=https://YOUR-REF.supabase.co
+VITE_SUPABASE_ANON_KEY=...
+VITE_VAPID_PUBLIC_KEY=...     # public half only
+```
+
+### 4. Local dev
+
+```bash
+cp .env.example .env    # fill in values
+npm install
+npm run dev
+npm run test:sql        # runs migrations + full lifecycle tests in in-memory Postgres
+```
+
+## Testing push on an iPhone
+
+Push only works on iOS 16.4+ **after** the app is added to the Home Screen. Open the site in Safari, tap Share, then Add to Home Screen. Open it from the Home Screen and go to Settings, then Turn on reminders. A local test notification confirms permission right away. The server reminder arrives within 5 minutes of the chosen time (it's skipped if you've already checked in that day).
+
+Check the job with `select * from cron.job_run_details order by start_time desc limit 20;`, and see the function's logs in the Supabase dashboard.
+
+## Open decisions (placeholders in place)
+
+- **Punishment library:** every entry is marked `[Placeholder]`. Replace them in **Admin → Punishments**.
+- **Check-in wording:** each goal stores its own question. Defaults are generated from the goal (e.g. "Did you avoid alcohol today?"), and participants and the admin can rewrite any of them.
+- **Branding:** dark theme with a gold "eclipse" mark, defined as CSS tokens at the top of `src/styles.css`. The icon lives in `public/icons/icon.svg`; run `npm run icons` after changing it.

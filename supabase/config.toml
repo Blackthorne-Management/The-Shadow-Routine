@@ -1,0 +1,5 @@
+project_id = "the-shadow-routine"
+
+# Called by pg_cron with a shared secret header instead of a user JWT
+[functions.send-reminders]
+verify_jwt = false
