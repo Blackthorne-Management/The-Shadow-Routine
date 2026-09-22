@@ -144,6 +144,25 @@ assert.match(pun.punishment_description, /reflection/);
 assert.equal((await one(`select finalize_week($1::date) n`, [W])).n, 0, 'finalize is idempotent');
 console.log('✓ weekly scoring math, bands, bonus cap, punishments');
 
+// --- pace-adjusted bands (leaderboard) vs final bands (punishments) ---------
+const pace = async (a, t, type, el) =>
+  (await one(`select pace_band($1, $2, $3::goal_type, $4) b`, [a, t, type, el])).b;
+assert.equal(await pace(0, 4, 'binary', 0), null, 'nothing owed before the first log → neutral');
+assert.equal(await pace(0, 4, 'binary', 1), 'green', 'gym 4x: a Monday rest day is not behind');
+assert.equal(await pace(0, 4, 'binary', 2), 'red', 'gym 4x: owes 1 workout after 2 days');
+assert.equal(await pace(1, 4, 'binary', 2), 'green');
+assert.equal(await pace(2, 7, 'inverse', 3), 'gray', 'refraining: 2 of 3 clean days = 67%');
+assert.equal(await pace(30, 200, 'percentage', 1), 'green', 'reading: 30 pages ≥ 80% of 28.6');
+assert.equal(await pace(15, 200, 'percentage', 1), 'red');
+assert.equal(await pace(3, 5, 'binary', 7), 'gray', 'full week: pace equals the final band');
+// A closed week's pace bands match its final bands exactly
+assert.deepEqual(s.pace_band_per_category, s.band_per_category);
+// Mid-week, the live row carries pace bands separately from strict bands
+assert.ok(live.pace_band_per_category !== undefined);
+const liveNow = await one(`select * from weekly_scores where user_id=$1 and week_start_date=$2`, [U1, live.week_start_date]);
+assert.equal(liveNow.category_scores.gym.pace_band !== undefined, true);
+console.log('✓ pace-adjusted bands');
+
 // --- proof & infractions ----------------------------------------------------
 await assert.rejects(as(U1, `select submit_proof($1, null, 'talked')`, [pun.id]), /FILE_REQUIRED/);
 await assert.rejects(as(U1, `select submit_proof($1, $2, null)`, [pun.id, `${U2}/x.jpg`]), /BAD_PATH/);
