@@ -74,7 +74,7 @@ const slides = (sex: Sex | null): Slide[] => [
       <div className="month-weeks ob-weeks">
         <span className="wk band-green prep">P</span><span className="wk band-green prep">P</span>
         <span className="wk band-green">1</span><span className="wk band-gray">2</span>
-        <span className="ob-arrow"><Icon name="arrow" size={18} /></span><span className="level">Gold Month</span>
+        <span className="ob-arrow"><Icon name="arrow" size={18} /></span><span className="level gold">Gold Month</span>
       </div>
     ),
   },

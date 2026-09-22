@@ -22,6 +22,8 @@
   --slate: #6f8b87;          /* band: gray */
   --coral: #ff8f7e;          /* band: red */
   --amber: #f2c46d;
+  --gold: #f7c52b;            /* Gold Months / Ultra Gold */
+  --gold-ink: #2a1f00;
 
   --r-lg: 24px;
   --r-md: 16px;
@@ -453,7 +455,7 @@ textarea { resize: vertical; }
 .wk.current { outline: 1.5px solid var(--lav); outline-offset: 1px; }
 .wk.future { opacity: .45; }
 .tier-card { border-radius: var(--r-md); padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; border: 1.5px solid var(--ink); }
-.tier-gold { background: var(--lav); border-color: var(--lav); color: var(--lav-ink); }
+.tier-gold { background: var(--gold); border-color: var(--gold); color: var(--gold-ink); }
 .tier-green { background: var(--mint); border-color: var(--mint); }
 .tier-gray { background: var(--paper-2); }
 .tier-red { background: var(--coral); border-color: var(--coral); }
@@ -564,3 +566,9 @@ textarea { resize: vertical; }
 .ob-dots { display: flex; justify-content: center; gap: 6px; }
 .ob-dots button { width: 8px; height: 8px; border-radius: 999px; border: 0; padding: 0; background: var(--ink-line); transition: width .2s, background .2s; }
 .ob-dots button.on { width: 22px; background: var(--ink); }
+
+/* ---------- gold (Gold Months, Ultra Gold) ---------- */
+.level.gold, .pill.gold { background: var(--gold); color: var(--gold-ink); border-color: var(--gold); }
+.month-goals .bar-fill { background: var(--gold); }
+.gold-text { color: var(--gold); }
+.goal-icon.gold { color: var(--gold); border-color: var(--gold); }

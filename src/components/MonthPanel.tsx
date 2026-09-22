@@ -34,7 +34,7 @@ export default function MonthPanel({ month, rewards, results, onChange }: {
               <p className="eyebrow">Program week {month.program_week} of 10 · {MONTH_WEEKS[month.month]}</p>
               <p className="stat-label">Month {month.month} · Week {month.week_of_month} of 4</p>
             </div>
-            <span className="level">Gold Month</span>
+            <span className="level gold">Gold Month</span>
           </div>
           <p className="stat-sub">
             Gold needs the monthly total, 3+ green weeks, at most 1 gray and no red. A weak week can be made up later in the month.
@@ -55,7 +55,7 @@ export default function MonthPanel({ month, rewards, results, onChange }: {
                     ))}
                     <div className="bar grow"><div className="bar-fill" style={{ width: `${pct}%` }} /></div>
                   </div>
-                  <p className={`small ${g.gold_status === 'lost' ? 'pace-red' : 'muted'}`}>
+                  <p className={`small ${g.gold_status === 'lost' ? 'pace-red' : 'gold-text'}`}>
                     {g.gold_status === 'lost'
                       ? (g.reds > 0 ? 'A red week ruled out Gold this month' : 'Two gray weeks ruled out Gold this month')
                       : `Gold on track${g.gold_reward ? ` → ${g.gold_reward}` : ''}`}
@@ -73,7 +73,7 @@ export default function MonthPanel({ month, rewards, results, onChange }: {
           <ul className="list">
             {rewards.map((r) => (
               <li key={r.id} className="list-row">
-                <span className="goal-icon sm"><Icon name={r.kind === 'ultra_wish' ? 'crown' : 'other'} /></span>
+                <span className="goal-icon sm gold"><Icon name={r.kind === 'ultra_wish' ? 'crown' : 'other'} /></span>
                 <div className="grow">
                   <strong style={{ fontWeight: 500 }}>{r.description}</strong>
                   <p className="small muted">
