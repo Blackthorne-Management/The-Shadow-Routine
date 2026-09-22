@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { supabase, friendlyError } from '../lib/supabase';
-import { THEME_ICONS } from '../lib/goals';
+import { Icon, ThemeIcon } from '../components/Icon';
 import { formatDay } from '../lib/dates';
 import type { Goal, TodayContext, WeeklyScore } from '../lib/types';
 import { ErrorText, Splash } from '../components/ui';
@@ -74,13 +74,12 @@ export default function CheckIn() {
   return (
     <main className="screen wizard">
       <header className="wizard-top">
-        <button className="icon-btn" onClick={back} aria-label="Back">‹</button>
+        <button className="icon-btn" onClick={back} aria-label="Back"><Icon name="back" /></button>
         <div className="segments" aria-label={`Step ${i + 1} of ${steps.length}`}>
           {steps.map((_, n) => <span key={n} className={n <= i ? 'on' : ''} />)}
         </div>
-        <Link to="/" className="icon-btn" aria-label="Close">✕</Link>
+        <Link to="/" className="icon-btn" aria-label="Close"><Icon name="close" /></Link>
       </header>
-      <p className="eyebrow center-text">{formatDay(ctx.date)}</p>
 
       <div className="question" key={i}>
         {step.kind === 'goal' && (
@@ -92,22 +91,32 @@ export default function CheckIn() {
 
         {step.kind === 'bonus' && ctx.challenge && (
           <>
-            <span className="q-icon">⚡</span>
-            <p className="eyebrow">Today's bonus · +{ctx.challenge.point_value} pts</p>
-            <h1 className="q-text">{ctx.challenge.description}</h1>
-            <p className="muted">Did you complete it?</p>
+            <section className="card q-card">
+              <div className="row between">
+                <span className="goal-icon"><Icon name="bolt" /></span>
+                <span className="level">+{ctx.challenge.point_value} pts</span>
+              </div>
+              <div className="stack tight">
+                <p className="eyebrow">Today's bonus · {formatDay(ctx.date)}</p>
+                <h1 className="q-text">{ctx.challenge.description}</h1>
+              </div>
+            </section>
+            <p className="muted center-text">Did you complete it?</p>
             <YesNo value={bonus == null ? null : bonus} onPick={(v) => { setBonus(v); setTimeout(next, 160); }} />
           </>
         )}
 
         {step.kind === 'review' && (
           <>
-            <h1 className="q-text">{editing ? 'Edit today' : 'Look right?'}</h1>
+            <section className="card">
+              <p className="eyebrow">{formatDay(ctx.date)}</p>
+              <h1 className="q-text">{editing ? 'Edit today' : 'Look right?'}</h1>
+            </section>
             <ul className="review">
               {goals.map((g, n) => (
                 <li key={g.id}>
                   <button className="review-row" onClick={() => setI(n)}>
-                    <span className="goal-icon sm">{THEME_ICONS[g.theme]}</span>
+                    <span className="goal-icon sm"><ThemeIcon theme={g.theme} /></span>
                     <span className="grow">{g.label}</span>
                     <strong className={answers[g.id]?.value == null ? 'missing' : ''}>{formatAnswer(g, answers[g.id])}</strong>
                   </button>
@@ -116,7 +125,7 @@ export default function CheckIn() {
               {ctx.challenge && (
                 <li>
                   <button className="review-row" onClick={() => setI(goals.length)}>
-                    <span className="goal-icon sm">⚡</span>
+                    <span className="goal-icon sm"><Icon name="bolt" /></span>
                     <span className="grow">{ctx.challenge.description}</span>
                     <strong className={bonus == null ? 'missing' : ''}>{bonus == null ? '—' : bonus ? 'Done' : 'Skipped'}</strong>
                   </button>
@@ -128,7 +137,7 @@ export default function CheckIn() {
             )}
             <p className="hint">You can edit today's answers until midnight. Past days are locked.</p>
             <ErrorText>{error}</ErrorText>
-            <button className="btn primary block big" onClick={submit} disabled={busy}>
+            <button className="btn accent block big" onClick={submit} disabled={busy}>
               {busy ? 'Saving…' : editing ? 'Save changes' : 'Lock it in'}
             </button>
           </>
@@ -146,11 +155,16 @@ function GoalQuestion({ goal, answer, onAnswer, onAnswerAndNext, onNext }: {
   useEffect(() => { if (goal.goal_type === 'percentage') inputRef.current?.focus(); }, [goal.goal_type]);
 
   const header = (
-    <>
-      <span className="q-icon">{THEME_ICONS[goal.theme]}</span>
-      <p className="eyebrow">{goal.label}</p>
-      <h1 className="q-text">{goal.prompt}</h1>
-    </>
+    <section className="card q-card">
+      <div className="row between">
+        <span className="goal-icon"><ThemeIcon theme={goal.theme} /></span>
+        <span className="level">{goal.category_point_max} pts</span>
+      </div>
+      <div className="stack tight">
+        <p className="eyebrow">{goal.label}</p>
+        <h1 className="q-text">{goal.prompt}</h1>
+      </div>
+    </section>
   );
 
   if (goal.goal_type === 'percentage') {
@@ -177,7 +191,7 @@ function GoalQuestion({ goal, answer, onAnswer, onAnswerAndNext, onNext }: {
           onPick={(v) => (v ? onAnswer({ value: 1, details: answer?.details }) : onAnswerAndNext({ value: 0 }))} />
         {yes && (
           <div className="gym-extra">
-            <p className="muted small">Optional details</p>
+            <p className="muted small pad">Optional details</p>
             <div className="chips">
               {WORKOUT_TYPES.map((t) => (
                 <button key={t} type="button" className={`chip ${answer?.details?.workout_type === t ? 'on' : ''}`}
@@ -221,21 +235,26 @@ function formatAnswer(g: Goal, a?: Answer) {
 
 function Done({ score, edited }: { score: WeeklyScore | null; edited: boolean }) {
   return (
-    <main className="screen center done-screen">
-      <div className="done-mark">✓</div>
-      <h1>{edited ? 'Updated' : 'Locked in'}</h1>
-      {score && (
-        <>
-          <p className="big-number">{Math.round(Number(score.total_points))}<span className="of"> pts this week</span></p>
-          <p className="muted">
-            {score.is_top_this_week ? "👑 You're the most consistent in the cohort right now."
-              : `You're #${score.consistency_rank} in the cohort.`}
-          </p>
-        </>
-      )}
-      <div className="stack full">
-        <Link to="/board" className="btn ghost block">See the leaderboard</Link>
-        <Link to="/" className="btn primary block">Done</Link>
+    <main className="screen">
+      <div className="linked" style={{ flex: 1 }}>
+        <section className="card" style={{ alignItems: 'flex-start' }}>
+          <div className="done-mark"><Icon name="check" size={44} /></div>
+          <h1 className="q-text">{edited ? 'Updated.' : 'Locked in.'}</h1>
+        </section>
+        {score && (
+          <section className="card" style={{ flex: 1 }}>
+            <p className="stat-label">This week</p>
+            <p className="big-number">{Math.round(Number(score.total_points))}<span className="of">/ 1,049</span></p>
+            <p className="muted">
+              {score.is_top_this_week ? "You're the most consistent in the cohort right now."
+                : `You're #${score.consistency_rank} in the cohort.`}
+            </p>
+          </section>
+        )}
+      </div>
+      <div className="row gap">
+        <Link to="/board" className="btn grow">Leaderboard</Link>
+        <Link to="/" className="btn primary grow">Done</Link>
       </div>
     </main>
   );

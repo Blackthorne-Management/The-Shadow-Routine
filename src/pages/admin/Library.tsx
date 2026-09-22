@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase, friendlyError } from '../../lib/supabase';
-import { THEME_ICONS, THEME_NAMES } from '../../lib/goals';
+import { THEME_NAMES } from '../../lib/goals';
+import { ThemeIcon } from '../../components/Icon';
 import type { ProofType, Theme } from '../../lib/types';
 import { ErrorText } from '../../components/ui';
 
 interface Entry { id: string; theme: Theme; description: string; proof_type: ProofType; active: boolean }
 
 const THEMES = Object.keys(THEME_NAMES) as Theme[];
-const PROOF_LABELS: Record<ProofType, string> = { photo: '📷 Photo', video: '🎥 Video', mentor_conversation: '💬 Mentor talk' };
+const PROOF_LABELS: Record<ProofType, string> = { photo: 'Photo', video: 'Video', mentor_conversation: 'Mentor talk' };
 
 export default function Library() {
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -49,7 +50,7 @@ export default function Library() {
         <h2>Add punishment</h2>
         <div className="row gap">
           <select value={draft.theme} onChange={(e) => setDraft({ ...draft, theme: e.target.value as Theme })}>
-            {THEMES.map((t) => <option key={t} value={t}>{THEME_ICONS[t]} {THEME_NAMES[t]}</option>)}
+            {THEMES.map((t) => <option key={t} value={t}>{THEME_NAMES[t]}</option>)}
           </select>
           <select value={draft.proof_type} onChange={(e) => setDraft({ ...draft, proof_type: e.target.value as ProofType })}>
             {Object.entries(PROOF_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -66,7 +67,7 @@ export default function Library() {
         if (list.length === 0) return null;
         return (
           <section key={t}>
-            <h2 className="section-title">{THEME_ICONS[t]} {THEME_NAMES[t]}</h2>
+            <h2 className="section-title row gap"><ThemeIcon theme={t} size={18} /> {THEME_NAMES[t]}</h2>
             <ul className="list">
               {list.map((e) => <LibraryRow key={e.id} e={e} onUpdate={update} onDelete={remove} />)}
             </ul>
@@ -88,7 +89,7 @@ function LibraryRow({ e, onUpdate, onDelete }: {
       <select value={e.proof_type} onChange={(ev) => onUpdate(e.id, { proof_type: ev.target.value as ProofType })}>
         {Object.entries(PROOF_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
       </select>
-      <button className="btn small ghost" onClick={() => onUpdate(e.id, { active: !e.active })}>{e.active ? 'Pause' : 'Use'}</button>
+      <button className="btn small" onClick={() => onUpdate(e.id, { active: !e.active })}>{e.active ? 'Pause' : 'Use'}</button>
       <button className="icon-btn small" aria-label="Delete" onClick={() => onDelete(e)}>✕</button>
     </li>
   );

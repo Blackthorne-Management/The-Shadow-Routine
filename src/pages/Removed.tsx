@@ -6,7 +6,7 @@ export default function Removed() {
     <main className="screen center">
       <h1>You've been removed from this cohort</h1>
       <p className="muted">Reach out to your mentor if you have questions.</p>
-      <button className="btn ghost" onClick={signOut}>Sign out</button>
+      <button className="btn" onClick={signOut}>Sign out</button>
     </main>
   );
 }

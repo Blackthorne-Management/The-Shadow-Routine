@@ -69,7 +69,7 @@ export default function Bonus() {
         {presets.map((p) => (
           <li key={p.id} className={`list-row ${p.active ? '' : 'dim'}`}>
             <span className="grow">{p.description}</span>
-            <button className="btn small ghost" onClick={() => togglePreset(p)}>{p.active ? 'Pause' : 'Use'}</button>
+            <button className="btn small" onClick={() => togglePreset(p)}>{p.active ? 'Pause' : 'Use'}</button>
             <button className="icon-btn small" aria-label="Delete preset" onClick={() => deletePreset(p)}>✕</button>
           </li>
         ))}
@@ -77,7 +77,7 @@ export default function Bonus() {
       <div className="row gap">
         <input className="grow" placeholder="Add a preset challenge" value={newPreset}
           onChange={(e) => setNewPreset(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addPreset()} />
-        <button className="btn ghost" onClick={addPreset}>Add</button>
+        <button className="btn" onClick={addPreset}>Add</button>
       </div>
     </>
   );

@@ -70,7 +70,7 @@ export default function Invites() {
               </div>
               {i.status === 'unused' ? (
                 <>
-                  <button className="btn small ghost" onClick={() => share(i.code)}>{copied === i.code ? 'Copied' : 'Share'}</button>
+                  <button className="btn small" onClick={() => share(i.code)}>{copied === i.code ? 'Copied' : 'Share'}</button>
                   <button className="icon-btn small" aria-label="Delete code" onClick={() => revoke(i.id)}>✕</button>
                 </>
               ) : <span className="pill">Used</span>}

@@ -33,7 +33,7 @@ export default function Proofs() {
 
   return (
     <>
-      <div className="seg wide">
+      <div className="seg">
         <button className={filter === 'review' ? 'on' : ''} onClick={() => setFilter('review')}>Needs review</button>
         <button className={filter === 'awaiting' ? 'on' : ''} onClick={() => setFilter('awaiting')}>Awaiting proof</button>
         <button className={filter === 'done' ? 'on' : ''} onClick={() => setFilter('done')}>Reviewed</button>
@@ -72,7 +72,7 @@ function ProofCard({ p, name, onDone }: { p: Punishment; name: string; onDone: (
       </div>
       <p><strong>{p.punishment_description}</strong></p>
       {p.proof_type === 'mentor_conversation' && p.proof_submitted_at && (
-        <p className="notice">💬 Says they discussed it with you {timeAgo(p.proof_submitted_at)}. Confirm or dispute.</p>
+        <p className="notice">Says they discussed it with you {timeAgo(p.proof_submitted_at)}. Confirm or dispute.</p>
       )}
       {p.proof_file_url && <ProofPreview path={p.proof_file_url} />}
       {p.proof_note && <p className="muted">“{p.proof_note}”</p>}
@@ -83,7 +83,7 @@ function ProofCard({ p, name, onDone }: { p: Punishment; name: string; onDone: (
           <input placeholder="Note to participant (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
           <ErrorText>{error}</ErrorText>
           <div className="row gap">
-            <button className="btn ghost grow danger-text" onClick={() => review(false)} disabled={busy}>
+            <button className="btn grow" onClick={() => review(false)} disabled={busy}>
               {p.proof_submitted_at ? 'Reject' : 'Mark missing'}
             </button>
             {p.proof_submitted_at && (

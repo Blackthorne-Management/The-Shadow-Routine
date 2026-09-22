@@ -15,10 +15,6 @@ export const THEME_NAMES: Record<Theme, string> = {
   schedule: 'Schedule / Time', word: 'Word / Promises', content: 'Content Posting', other: 'Fully custom',
 };
 
-export const THEME_ICONS: Record<Theme, string> = {
-  gym: '🏋️', refraining: '🚫', reading: '📖', nutrition: '🥗', schedule: '⏰', word: '🤝', content: '📱', other: '⭐',
-};
-
 /** Suggested starting points for the three custom slots. */
 export const CUSTOM_SUGGESTIONS: {
   theme: Theme; goal_type: GoalType; label: string; target_value: number; unit: string;

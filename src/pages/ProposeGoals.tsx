@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { supabase, friendlyError } from '../lib/supabase';
 import {
-  CATEGORY_ORDER, CATEGORY_POINTS, CUSTOM_SUGGESTIONS, THEME_ICONS, THEME_NAMES, defaultPrompt,
+  CATEGORY_ORDER, CATEGORY_POINTS, CUSTOM_SUGGESTIONS, THEME_NAMES, defaultPrompt,
 } from '../lib/goals';
 import type { Category, GoalType, Theme } from '../lib/types';
-import { ErrorText, PageHeader } from '../components/ui';
+import { ErrorText, TopBar } from '../components/ui';
+import { ThemeIcon } from '../components/Icon';
 
 interface Draft {
   category: Category;
@@ -75,14 +76,16 @@ export default function ProposeGoals() {
 
   return (
     <main className="screen">
-      <PageHeader subtitle="Step 1 of 2" title="Set your five goals"
-        right={<button className="link" onClick={signOut}>Sign out</button>} />
-      <p className="muted">
-        Your mentor reviews these before you start, and may adjust targets. Every goal is scored weekly (Mon–Sun).
-      </p>
+      <TopBar pill="Step 1 of 2" />
+      <section className="card">
+        <h1>Set your five goals</h1>
+        <p className="muted">
+          Your mentor reviews these before you start, and may adjust targets. Every goal is scored weekly (Mon–Sun).
+        </p>
+      </section>
 
       <section className="card">
-        <GoalHead icon="🏋️" title="Gym" points={CATEGORY_POINTS.gym} />
+        <GoalHead icon={<ThemeIcon theme="gym" />} title="Gym" points={CATEGORY_POINTS.gym} />
         <label className="field">
           <span>Workouts per week (30+ min each)</span>
           <Stepper value={gym.target_value} min={1} max={7}
@@ -92,7 +95,7 @@ export default function ProposeGoals() {
       </section>
 
       <section className="card">
-        <GoalHead icon="🚫" title="Refraining" points={CATEGORY_POINTS.refraining} />
+        <GoalHead icon={<ThemeIcon theme="refraining" />} title="Refraining" points={CATEGORY_POINTS.refraining} />
         <label className="field">
           <span>What are you giving up?</span>
           <input value={vice} placeholder="e.g. alcohol, porn, weed, sugar"
@@ -114,6 +117,9 @@ export default function ProposeGoals() {
       <button className="btn primary block sticky-cta" onClick={submit} disabled={busy}>
         {busy ? 'Submitting…' : 'Submit for approval'}
       </button>
+      <div className="center-text">
+        <button className="link muted" onClick={signOut}>Sign out</button>
+      </div>
     </main>
   );
 }
@@ -123,13 +129,13 @@ function CustomGoal({ n, d, prompt, onChange }: {
 }) {
   return (
     <section className="card">
-      <GoalHead icon={THEME_ICONS[d.theme]} title={`Custom goal ${n}`} points={CATEGORY_POINTS[d.category]} />
+      <GoalHead icon={<ThemeIcon theme={d.theme} />} title={`Custom goal ${n}`} points={CATEGORY_POINTS[d.category]} />
       <div className="chips" role="radiogroup" aria-label="Goal area">
         {CUSTOM_SUGGESTIONS.map((s) => (
           <button key={s.theme} type="button" role="radio" aria-checked={d.theme === s.theme}
             className={`chip ${d.theme === s.theme ? 'on' : ''}`}
             onClick={() => onChange({ ...s, label: s.label || d.label, promptEdited: false })}>
-            {THEME_ICONS[s.theme]} {THEME_NAMES[s.theme]}
+            <ThemeIcon theme={s.theme} size={15} /> {THEME_NAMES[s.theme]}
           </button>
         ))}
       </div>
@@ -166,12 +172,12 @@ function CustomGoal({ n, d, prompt, onChange }: {
   );
 }
 
-function GoalHead({ icon, title, points }: { icon: string; title: string; points: number }) {
+function GoalHead({ icon, title, points }: { icon: ReactNode; title: string; points: number }) {
   return (
     <div className="goal-head">
       <span className="goal-icon">{icon}</span>
       <h2>{title}</h2>
-      <span className="pill">{points} pts</span>
+      <span className="level">{points} pts</span>
     </div>
   );
 }

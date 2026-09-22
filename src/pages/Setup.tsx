@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import ReminderSettings from '../components/ReminderSettings';
-import { PageHeader } from '../components/ui';
+import { TopBar } from '../components/ui';
 
 export default function Setup() {
   const navigate = useNavigate();
@@ -14,13 +14,16 @@ export default function Setup() {
 
   return (
     <main className="screen">
-      <PageHeader subtitle="You're approved 🎉" title="Set your nightly reminder" />
-      <p className="muted">
-        Pick when you want the nudge to log your day. Most people choose an hour or two before bed.
-      </p>
-      <section className="card">
-        <ReminderSettings />
-      </section>
+      <TopBar pill="Approved" />
+      <div className="linked">
+        <section className="card">
+          <h1>Set your nightly reminder</h1>
+          <p className="muted">Pick when you want the nudge to log your day. Most people choose an hour or two before bed.</p>
+        </section>
+        <section className="card">
+          <ReminderSettings />
+        </section>
+      </div>
       {notif ? (
         <button className="btn primary block" onClick={() => navigate('/', { replace: true })}>Start</button>
       ) : (

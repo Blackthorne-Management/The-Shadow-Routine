@@ -6,6 +6,7 @@ import {
   isIOS, needsInstallForPush, pushSupported, showTestNotification, subscribeToPush, unsubscribeFromPush,
 } from '../lib/push';
 import { ErrorText } from './ui';
+import { Icon } from './Icon';
 
 /** Reminder time + push permission. Saves to notification_settings. */
 export default function ReminderSettings({ onSaved }: { onSaved?: () => void }) {
@@ -67,16 +68,16 @@ export default function ReminderSettings({ onSaved }: { onSaved?: () => void }) 
         <p className="notice">This browser can't receive push notifications. {isIOS() ? 'Update to iOS 16.4 or later.' : ''}</p>
       ) : pushOn ? (
         <div className="row gap">
-          <span className="pill green">🔔 Notifications on</span>
+          <span className="pill green"><Icon name="bell" size={13} /> Notifications on</span>
           <button className="link" onClick={disablePush} disabled={busy}>Turn off</button>
         </div>
       ) : (
-        <button className="btn primary block" onClick={enablePush} disabled={busy}>🔔 Turn on reminders</button>
+        <button className="btn primary block" onClick={enablePush} disabled={busy}><Icon name="bell" size={16} /> Turn on reminders</button>
       )}
 
       <ErrorText>{error}</ErrorText>
       {msg && <p className="success">{msg}</p>}
-      <button className="btn ghost block" onClick={() => save()} disabled={busy}>Save reminder time</button>
+      <button className="btn block" onClick={() => save()} disabled={busy}>Save reminder time</button>
     </div>
   );
 }

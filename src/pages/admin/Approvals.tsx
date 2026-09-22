@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase, friendlyError } from '../../lib/supabase';
-import { THEME_ICONS, THEME_NAMES, sortGoals } from '../../lib/goals';
+import { THEME_NAMES, sortGoals } from '../../lib/goals';
+import { ThemeIcon } from '../../components/Icon';
 import type { Goal, Profile } from '../../lib/types';
 import { Empty, ErrorText } from '../../components/ui';
 
@@ -36,7 +37,7 @@ export default function Approvals() {
         <input type="checkbox" checked={showActive} onChange={(e) => setShowActive(e.target.checked)} />
         Also show active participants (to adjust their goals)
       </label>
-      {pending.length === 0 && !showActive && <Empty>No goal submissions waiting. 🎉</Empty>}
+      {pending.length === 0 && !showActive && <Empty>No goal submissions waiting.</Empty>}
       {people.map((p) => <PersonCard key={p.profile.id} person={p} onDone={load} />)}
     </>
   );
@@ -66,7 +67,7 @@ function PersonCard({ person, onDone }: { person: Person; onDone: () => void }) 
           <h2>{person.profile.display_name}</h2>
           <p className="small muted">@{person.profile.username} · {isPending ? 'waiting on approval' : 'active'}</p>
         </div>
-        {isPending && <span className="pill amber">Pending</span>}
+        {isPending && <span className="level">Pending</span>}
       </div>
 
       {goals.length < 5 ? (
@@ -76,7 +77,7 @@ function PersonCard({ person, onDone }: { person: Person; onDone: () => void }) 
           {goals.map((g) => (
             <div key={g.id} className="goal-edit">
               <div className="goal-edit-head">
-                <span className="goal-icon sm">{THEME_ICONS[g.theme]}</span>
+                <span className="goal-icon sm"><ThemeIcon theme={g.theme} /></span>
                 <strong>{g.category === 'gym' || g.category === 'refraining' ? THEME_NAMES[g.theme] : `${THEME_NAMES[g.theme]} (${g.category.replace('_', ' ')})`}</strong>
                 <span className="pill">{g.category_point_max}</span>
               </div>

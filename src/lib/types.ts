@@ -39,6 +39,8 @@ export interface CategoryScore {
   pct: number;
   max: number;
   band: Band;
+  /** on-track color for the live week (null until the first day counts) */
+  pace_band: Band | null;
 }
 
 export interface WeeklyScore {
@@ -49,7 +51,10 @@ export interface WeeklyScore {
   total_category_points: number;
   bonus_points: number;
   total_points: number;
+  /** strict % of the full weekly target — drives punishments */
   band_per_category: Partial<Record<Category, Band>>;
+  /** pace-adjusted — drives leaderboard dots / home colors */
+  pace_band_per_category: Partial<Record<Category, Band | null>>;
   consistency_rank: number | null;
   is_top_this_week: boolean;
   finalized: boolean;

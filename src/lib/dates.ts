@@ -38,3 +38,13 @@ export function timeAgo(iso: string) {
   if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
   return `${Math.floor(s / 86400)}d ago`;
 }
+
+/** "3H 41M LEFT" until local midnight — the same-day edit deadline. */
+export function timeLeftToday(tz: string, at = new Date()): string {
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+    .formatToParts(at);
+  const h = Number(parts.find((p) => p.type === 'hour')!.value);
+  const m = Number(parts.find((p) => p.type === 'minute')!.value);
+  const left = 24 * 60 - (h * 60 + m);
+  return `${Math.floor(left / 60)}H ${left % 60}M LEFT`;
+}

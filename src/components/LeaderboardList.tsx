@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { CATEGORY_ORDER } from '../lib/goals';
 import type { WeeklyScore } from '../lib/types';
 import { BandDot, Empty } from './ui';
+import { Icon } from './Icon';
 
 interface Row extends WeeklyScore { name: string; move: number }
 
@@ -39,34 +40,39 @@ export default function LeaderboardList({ week, meId }: { week: string; meId?: s
   }, [week, load]);
 
   if (!rows) return <div className="skeleton-list" />;
-  if (rows.length === 0) return <Empty>No scores yet this week. First check-in puts you on the board.</Empty>;
+  if (rows.length === 0) return <Empty>No scores yet this week. The first check-in puts you on the board.</Empty>;
 
   return (
     <ol className="board">
-      {rows.map((r) => (
-        <li key={r.user_id} className={`board-row ${r.is_top_this_week ? 'top' : ''} ${r.user_id === meId ? 'me' : ''}`}>
-          <span className="board-rank">{r.consistency_rank}</span>
-          <div className="board-main">
-            <div className="board-name">
-              {r.name}
-              {r.user_id === meId && <span className="you">you</span>}
-              {r.is_top_this_week && <span className="top-badge">👑 Most consistent</span>}
+      {rows.map((r) => {
+        // Open week: pace-adjusted dots (motivational). Closed week: the
+        // strict final bands that decided punishments.
+        const dots = r.finalized ? r.band_per_category : r.pace_band_per_category ?? r.band_per_category;
+        return (
+          <li key={r.user_id} className={`board-row ${r.is_top_this_week ? 'top' : ''} ${r.user_id === meId ? 'me' : ''}`}>
+            <span className="board-rank">{r.consistency_rank}</span>
+            <div className="board-main">
+              <div className="board-name">
+                {r.name}
+                {r.user_id === meId && <span className="you">you</span>}
+                {r.is_top_this_week && <span className="level">Most consistent</span>}
+              </div>
+              <div className="board-dots">
+                {CATEGORY_ORDER.map((c) => <BandDot key={c} band={dots?.[c]} />)}
+                {r.bonus_points > 0 && <span className="bonus-chip"><Icon name="bolt" size={13} />{r.bonus_points}</span>}
+              </div>
             </div>
-            <div className="board-dots">
-              {CATEGORY_ORDER.map((c) => <BandDot key={c} band={r.band_per_category?.[c]} />)}
-              {r.bonus_points > 0 && <span className="bonus-chip">⚡{r.bonus_points}</span>}
+            <div className="board-pts">
+              {Math.round(Number(r.total_points))}
+              {r.move !== 0 && (
+                <span key={`${r.consistency_rank}`} className={`move ${r.move > 0 ? 'up' : 'down'}`}>
+                  {r.move > 0 ? `▲${r.move}` : `▼${-r.move}`}
+                </span>
+              )}
             </div>
-          </div>
-          <div className="board-pts">
-            {Math.round(Number(r.total_points))}
-            {r.move !== 0 && (
-              <span key={`${r.consistency_rank}`} className={`move ${r.move > 0 ? 'up' : 'down'}`}>
-                {r.move > 0 ? `▲${r.move}` : `▼${-r.move}`}
-              </span>
-            )}
-          </div>
-        </li>
-      ))}
+          </li>
+        );
+      })}
     </ol>
   );
 }

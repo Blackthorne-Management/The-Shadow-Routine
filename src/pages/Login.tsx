@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase, friendlyError } from '../lib/supabase';
-import { ErrorText } from '../components/ui';
+import { ErrorText, TopBar } from '../components/ui';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -29,13 +29,18 @@ export default function Login() {
   }
 
   return (
-    <main className="screen auth">
-      <div className="brand">
-        <img src="/icons/icon.svg" alt="" width={64} height={64} />
-        <h1>The Shadow Routine</h1>
-        <p className="muted">Most consistent wins.</p>
+    <main className="screen">
+      <div className="linked">
+        <TopBar pill="Pilot" />
+        <section className="card auth-hero">
+        <h1>Most consistent<br />wins.</h1>
+        <div className="row" style={{ gap: 48 }}>
+          <div><p className="eyebrow">Program</p><p>The Shadow Routine</p></div>
+          <div><p className="eyebrow">Goals</p><p>5 daily</p></div>
+        </div>
+        </section>
       </div>
-      <form onSubmit={submit} className="stack">
+      <form onSubmit={submit} className="stack auth-form">
         <label className="field">
           <span>Email</span>
           <input type="email" autoComplete="email" inputMode="email" value={email}
@@ -49,11 +54,9 @@ export default function Login() {
         <ErrorText>{error}</ErrorText>
         {info && <p className="success">{info}</p>}
         <button className="btn primary block" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
-        <button type="button" className="link" onClick={forgot}>Forgot password?</button>
+        <button type="button" className="link muted" onClick={forgot}>Forgot password?</button>
       </form>
-      <p className="muted center-text">
-        Have an invite code? <Link to="/join">Join the cohort</Link>
-      </p>
+      <Link to="/join" className="btn block">I have an invite code</Link>
     </main>
   );
 }

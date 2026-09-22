@@ -1,6 +1,6 @@
 // The Shadow Routine service worker: offline app shell + Web Push.
 // Bump VERSION to force clients onto a fresh cache after a deploy.
-const VERSION = 'v1';
+const VERSION = 'v2';
 const SHELL_CACHE = `shell-${VERSION}`;
 const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/apple-touch-icon.png'];
 

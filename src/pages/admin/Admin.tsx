@@ -1,4 +1,5 @@
 import { NavLink, Route, Routes } from 'react-router-dom';
+import { TopBar } from '../../components/ui';
 import Overview from './Overview';
 import Approvals from './Approvals';
 import Invites from './Invites';
@@ -20,12 +21,7 @@ const TABS = [
 export default function Admin() {
   return (
     <main className="screen with-tabs admin">
-      <header className="page-header">
-        <div>
-          <p className="eyebrow">Founder</p>
-          <h1>Admin</h1>
-        </div>
-      </header>
+      <TopBar pill="Admin" />
       <nav className="subnav" aria-label="Admin sections">
         {TABS.map((t) => (
           <NavLink key={t.to} to={t.to ? `/admin/${t.to}` : '/admin'} end className={({ isActive }) => (isActive ? 'on' : '')}>{t.label}</NavLink>

@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useAuth } from '../lib/auth';
 import { supabase, friendlyError } from '../lib/supabase';
-import { THEME_ICONS, describeTarget } from '../lib/goals';
+import { describeTarget } from '../lib/goals';
+import { ThemeIcon } from '../components/Icon';
 import ReminderSettings from '../components/ReminderSettings';
-import { ErrorText, PageHeader } from '../components/ui';
+import { ErrorText, TopBar } from '../components/ui';
 
 export default function Settings() {
   const { profile, goals, session, refresh, signOut } = useAuth();
@@ -29,7 +30,7 @@ export default function Settings() {
 
   return (
     <main className="screen with-tabs">
-      <PageHeader title="Settings" subtitle={`@${profile?.username}`} />
+      <TopBar pill={`@${profile?.username}`} />
 
       {profile?.role === 'participant' && (
         <section className="card">
@@ -44,7 +45,7 @@ export default function Settings() {
           <ul className="list plain">
             {goals.map((g) => (
               <li key={g.id} className="list-row">
-                <span className="goal-icon sm">{THEME_ICONS[g.theme]}</span>
+                <span className="goal-icon sm"><ThemeIcon theme={g.theme} /></span>
                 <div className="grow">
                   <strong>{g.label}</strong>
                   <p className="small muted">{describeTarget(g)} · {g.category_point_max} pts</p>
@@ -62,20 +63,20 @@ export default function Settings() {
           <span>Display name</span>
           <div className="row gap">
             <input className="grow" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} />
-            <button className="btn ghost" onClick={saveName} disabled={!name.trim() || name === profile?.display_name}>Save</button>
+            <button className="btn" onClick={saveName} disabled={!name.trim() || name === profile?.display_name}>Save</button>
           </div>
         </label>
         <label className="field">
           <span>New password</span>
           <div className="row gap">
             <input className="grow" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
-            <button className="btn ghost" onClick={changePassword} disabled={!password}>Change</button>
+            <button className="btn" onClick={changePassword} disabled={!password}>Change</button>
           </div>
         </label>
         <p className="hint">Signed in as {session?.user.email}</p>
         <ErrorText>{error}</ErrorText>
         {msg && <p className="success">{msg}</p>}
-        <button className="btn ghost block danger-text" onClick={signOut}>Sign out</button>
+        <button className="btn block" onClick={signOut}>Sign out</button>
       </section>
     </main>
   );

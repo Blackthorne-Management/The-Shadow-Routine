@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { supabase, friendlyError } from '../lib/supabase';
 import { browserTimezone } from '../lib/dates';
-import { ErrorText } from '../components/ui';
+import { ErrorText, TopBar } from '../components/ui';
 
 export default function Join() {
   const [params] = useSearchParams();
@@ -56,22 +56,25 @@ export default function Join() {
 
   if (checkEmail) {
     return (
-      <main className="screen auth center">
-        <h1>Check your email</h1>
-        <p className="muted">Confirm your address, then come back and sign in.</p>
-        <Link to="/login" className="btn primary">Go to sign in</Link>
+      <main className="screen">
+        <TopBar pill="Almost in" />
+        <section className="card auth-hero">
+          <h1>Check your<br />email.</h1>
+          <p className="muted">Confirm your address, then come back and sign in.</p>
+        </section>
+        <Link to="/login" className="btn primary block">Go to sign in</Link>
       </main>
     );
   }
 
   return (
-    <main className="screen auth">
-      <div className="brand">
-        <img src="/icons/icon.svg" alt="" width={56} height={56} />
-        <h1>Join the cohort</h1>
+    <main className="screen">
+      <TopBar pill="Invite only" />
+      <section className="card auth-hero">
+        <h1>Join the<br />cohort.</h1>
         <p className="muted">You'll need the invite code your mentor sent you.</p>
-      </div>
-      <form onSubmit={submit} className="stack">
+      </section>
+      <form onSubmit={submit} className="stack auth-form">
         <label className="field">
           <span>Invite code</span>
           <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())}
@@ -100,7 +103,7 @@ export default function Join() {
         <ErrorText>{error}</ErrorText>
         <button className="btn primary block" disabled={busy}>{busy ? 'Creating account…' : 'Create account'}</button>
       </form>
-      <p className="muted center-text">Already joined? <Link to="/login">Sign in</Link></p>
+      <p className="muted center-text">Already joined? <Link to="/login" className="link">Sign in</Link></p>
     </main>
   );
 }

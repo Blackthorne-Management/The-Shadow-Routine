@@ -6,6 +6,7 @@ import { formatWeek } from '../lib/dates';
 import type { Punishment } from '../lib/types';
 import { ErrorText, Splash } from '../components/ui';
 import ProofPreview from '../components/ProofPreview';
+import { Icon } from '../components/Icon';
 
 const MAX_MB = 50; // Supabase free-tier per-file limit
 
@@ -49,9 +50,12 @@ export default function PunishmentPage() {
 
   return (
     <main className="screen with-tabs">
-      <Link to="/" className="back-link">‹ Today</Link>
-      <p className="eyebrow">Red band · {goal?.label ?? p.category} · {formatWeek(p.week_start_date)}</p>
-      <h1>{p.punishment_description}</h1>
+      <Link to="/" className="back-link"><Icon name="back" size={16} /> Today</Link>
+      <section className="card">
+        <span className="pill red" style={{ alignSelf: 'flex-start' }}>Red band</span>
+        <p className="eyebrow">{goal?.label ?? p.category} · {formatWeek(p.week_start_date)}</p>
+        <h1>{p.punishment_description}</h1>
+      </section>
 
       <div className={`notice ${p.proof_status === 'rejected' ? 'red' : p.proof_status === 'accepted' ? 'green' : ''}`}>
         {p.proof_status === 'accepted' && <strong>Proof accepted. You're clear.</strong>}
@@ -71,7 +75,7 @@ export default function PunishmentPage() {
             <label className="file-drop">
               <input type="file" accept={p.proof_type === 'video' ? 'video/*' : 'image/*,video/*'}
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-              <span>{file ? file.name : p.proof_type === 'video' ? '🎥 Record or choose a video' : '📷 Take or choose a photo'}</span>
+              <Icon name={p.proof_type === 'video' ? 'video' : 'camera'} /><span>{file ? file.name : p.proof_type === 'video' ? 'Record or choose a video' : 'Take or choose a photo'}</span>
             </label>
           )}
           <label className="field">

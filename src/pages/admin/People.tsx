@@ -4,6 +4,7 @@ import { supabase, friendlyError } from '../../lib/supabase';
 import { addDays, formatWeek, localDate, weekStart } from '../../lib/dates';
 import type { UserStatus } from '../../lib/types';
 import { Empty, ErrorText } from '../../components/ui';
+import { Icon } from '../../components/Icon';
 
 interface DirRow {
   id: string; username: string; display_name: string; email: string | null;
@@ -60,13 +61,13 @@ export default function People() {
               </div>
               <div className="facts">
                 <span className={r.infraction_count >= 2 ? 'bad' : r.infraction_count === 1 ? 'warn' : ''}>
-                  ⚠️ {r.infraction_count} infraction{r.infraction_count === 1 ? '' : 's'}
+                  <Icon name="alert" size={14} /> {r.infraction_count} infraction{r.infraction_count === 1 ? '' : 's'}
                 </span>
-                <span className={notif === 'on' ? '' : 'warn'}>🔔 {notif}{r.reminder_time ? ` · ${r.reminder_time.slice(0, 5)}` : ''}</span>
+                <span className={notif === 'on' ? '' : 'warn'}><Icon name="bell" size={14} /> {notif}{r.reminder_time ? ` · ${r.reminder_time.slice(0, 5)}` : ''}</span>
                 <span className={r.last_checkin === today ? '' : 'warn'}>
-                  ✓ {r.last_checkin ? (r.last_checkin === today ? 'checked in today' : `last ${r.last_checkin}`) : 'never checked in'}
+                  <Icon name="check" size={14} /> {r.last_checkin ? (r.last_checkin === today ? 'checked in today' : `last ${r.last_checkin}`) : 'never checked in'}
                 </span>
-                {r.pending_proofs > 0 && <span>📎 {r.pending_proofs} proof to review</span>}
+                {r.pending_proofs > 0 && <span><Icon name="file" size={14} /> {r.pending_proofs} proof to review</span>}
               </div>
               {r.status === 'active' && r.infraction_count >= 2 && (
                 <div className="notice red">
@@ -87,7 +88,7 @@ export default function People() {
         </p>
         <ErrorText>{error}</ErrorText>
         {msg && <p className="success">{msg}</p>}
-        <button className="btn ghost block" onClick={finalize}>Finalize {formatWeek(lastWeek)}</button>
+        <button className="btn block" onClick={finalize}>Finalize {formatWeek(lastWeek)}</button>
       </section>
     </>
   );
