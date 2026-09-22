@@ -529,3 +529,38 @@ textarea { resize: vertical; }
 }
 .switch:checked { background: var(--lav); border-color: var(--lav); }
 .switch:checked::after { transform: translateX(18px); background: var(--lav-ink); }
+
+/* ---------- onboarding ---------- */
+.onboarding { gap: 14px; }
+.ob-top { padding: 4px 8px 0; }
+.ob-top .wordmark { color: var(--ink); }
+.ob-track {
+  flex: 1; display: flex; overflow-x: auto; scroll-snap-type: x mandatory;
+  margin: 0 -12px; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+}
+.ob-track::-webkit-scrollbar { display: none; }
+.ob-slide { flex: 0 0 100%; scroll-snap-align: start; padding: 0 12px; display: flex; flex-direction: column; justify-content: flex-end; gap: 14px; }
+.ob-visual { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 150px; }
+.ob-text h1 { font-size: 28px; }
+.ob-body { display: flex; flex-direction: column; gap: 10px; color: var(--on-panel-muted); font-size: 15px; line-height: 1.5; }
+.ob-body b { color: var(--on-panel); font-weight: 600; }
+.ob-hero { filter: drop-shadow(0 0 40px rgba(203, 197, 255, .5)); animation: rank-pop .8s cubic-bezier(.2, 1.6, .4, 1); }
+.ob-goals { list-style: none; margin: 0; padding: 0; width: 100%; display: flex; flex-direction: column; gap: 6px; }
+.ob-goals li { display: flex; align-items: center; gap: 10px; border: 1.5px solid var(--ink); border-radius: 14px; padding: 9px 12px; font-size: 14px; }
+.ob-goals li span { flex: 1; }
+.ob-goals li b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.ob-yesno { width: 100%; display: flex; flex-direction: column; gap: 10px; text-align: center; font-size: 20px; }
+.ob-yesno div { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ob-yesno b { border: 1.5px solid var(--ink); border-radius: 999px; padding: 14px 0; font-size: 12px; letter-spacing: .08em; }
+.ob-yesno b.yes { background: var(--lav); border-color: var(--lav); color: var(--lav-ink); }
+.ob-bands { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+.ob-bands .tier-card { padding: 10px 14px; }
+.ob-icon { color: var(--ink); }
+.ob-mentor { font-size: 16px; padding: 10px 16px; }
+.ob-weeks { justify-content: center; }
+.ob-weeks .wk { width: 34px; height: 34px; font-size: 13px; }
+.ob-arrow { display: grid; place-items: center; margin: 0 6px; }
+.ob-ranks { display: flex; align-items: flex-end; gap: 10px; }
+.ob-dots { display: flex; justify-content: center; gap: 6px; }
+.ob-dots button { width: 8px; height: 8px; border-radius: 999px; border: 0; padding: 0; background: var(--ink-line); transition: width .2s, background .2s; }
+.ob-dots button.on { width: 22px; background: var(--ink); }

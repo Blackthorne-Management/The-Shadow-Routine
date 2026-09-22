@@ -18,6 +18,7 @@ import PunishmentPage from './pages/Punishment';
 import RankPath from './pages/RankPath';
 import Chat from './pages/Chat';
 import Notifications from './pages/Notifications';
+import Onboarding from './pages/Onboarding';
 // Participants never download the admin dashboard
 const Admin = lazy(() => import('./pages/admin/Admin'));
 
@@ -48,6 +49,7 @@ export default function App() {
           <Route path="/board" element={<Leaderboard />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/notifications" element={<Notifications />} />
+          <Route path="/how-it-works" element={<Onboarding />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/admin" replace />} />
         </Routes>
@@ -58,6 +60,8 @@ export default function App() {
 
   // Accounts from before the rank system pick their path once
   if (!profile.sex) return <RankPath />;
+  // Then the "how it works" intro, once per account (before goal setup for new signups)
+  if (!profile.onboarded_at) return <Onboarding firstRun />;
 
   if (profile.status === 'pending_approval') {
     const proposed = goals.length === 5;
@@ -81,6 +85,7 @@ export default function App() {
         <Route path="/board" element={<Leaderboard />} />
         <Route path="/chat" element={<Chat />} />
         <Route path="/notifications" element={<Notifications />} />
+        <Route path="/how-it-works" element={<Onboarding />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/punishment/:id" element={<PunishmentPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

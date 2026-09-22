@@ -23,6 +23,8 @@ export interface Profile {
   /** running total over program weeks 1–10 (max 10,490) */
   cumulative_cycle_points: number;
   rank_level: number;
+  /** when the "how it works" intro was first finished/skipped */
+  onboarded_at: string | null;
 }
 
 export interface ChatMessage {

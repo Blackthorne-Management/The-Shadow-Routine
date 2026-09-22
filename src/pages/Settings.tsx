@@ -4,6 +4,7 @@ import { supabase, friendlyError } from '../lib/supabase';
 import { describeTarget } from '../lib/goals';
 import { ThemeIcon } from '../components/Icon';
 import ReminderSettings from '../components/ReminderSettings';
+import { Link } from 'react-router-dom';
 import { ErrorText, TopBar } from '../components/ui';
 import RankCard from '../components/RankCard';
 import Emblem from '../components/Emblem';
@@ -55,6 +56,12 @@ export default function Settings() {
         <h2>{profile?.role === 'admin' ? 'Push notifications' : 'Reminders & push'}</h2>
         <ReminderSettings showTime={profile?.role === 'participant'} />
       </section>
+
+      <Link to="/how-it-works" className="list-row link-row">
+        <span className="goal-icon sm"><span aria-hidden>?</span></span>
+        <div className="grow"><strong style={{ fontWeight: 500 }}>How the app works</strong><p className="small muted">Colors, punishments, Gold Months, ranks, your mentor</p></div>
+        <span aria-hidden>›</span>
+      </Link>
 
       <section className="card" id="notifications">
         <h2>Notifications</h2>

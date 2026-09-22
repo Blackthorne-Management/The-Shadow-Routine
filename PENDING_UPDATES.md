@@ -122,6 +122,20 @@ Messages use the founder's wording from the original spec text.
 - Two chat channels: Cohort and Everyone (global, for the future multi-cohort app).
 - Me → Notifications: per-type toggles. Defaults: everything on except Everyone chat.
 
+## 14. "How it works" intro at signup (logged, built and deployed 2026-09-22)
+- 10 swipeable screens after signup, before goal setup:
+  1. Welcome
+  2. The 5 goals and points
+  3. The nightly check-in
+  4. Green/gray/red
+  5. Punishments and infractions
+  6. Gold Months and rewards
+  7. The Ultra month
+  8. Ranks
+  9. The mentor
+  10. Cohort, chat and notifications
+- Shown once per account (server-side flag). Existing accounts see it once too. Reopen any time from Me → How the app works.
+
 ## 8. (Unclear) "We'll graph the punishments"
 - Means a chart of punishments over time? Or writing up the real punishment list? *(Possibly covered now by #6.)*
 

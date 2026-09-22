@@ -400,4 +400,14 @@ await as(U3, `select mark_notifications_read(null)`);
 assert.equal((await db.query(`select 1 from notifications where user_id=$1 and read_at is null`, [U3])).rows.length, 0);
 console.log('✓ notifications: events, preferences, chat fan-out, dedupe, global chat');
 
+// --- onboarding ---------------------------------------------------------------
+assert.equal((await one(`select onboarded_at from profiles where id=$1`, [U4])).onboarded_at, null);
+await as(U4, `select mark_onboarded()`);
+const ob = (await one(`select onboarded_at from profiles where id=$1`, [U4])).onboarded_at;
+assert.ok(ob, 'intro marked as seen');
+await as(U4, `select mark_onboarded()`);
+assert.equal(String((await one(`select onboarded_at from profiles where id=$1`, [U4])).onboarded_at), String(ob), 'first time is kept');
+assert.equal((await one(`select onboarded_at from profiles where id=$1`, [U3])).onboarded_at, null, 'only your own account');
+console.log('✓ onboarding flag');
+
 console.log('\nAll SQL tests passed.');
