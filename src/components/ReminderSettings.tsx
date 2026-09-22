@@ -9,7 +9,8 @@ import { ErrorText } from './ui';
 import { Icon } from './Icon';
 
 /** Reminder time + push permission. Saves to notification_settings. */
-export default function ReminderSettings({ onSaved }: { onSaved?: () => void }) {
+/** showTime=false: push on/off only (the mentor has no nightly reminder). */
+export default function ReminderSettings({ onSaved, showTime = true }: { onSaved?: () => void; showTime?: boolean }) {
   const { profile, notif, refresh } = useAuth();
   const [time, setTime] = useState((notif?.reminder_time ?? '21:00').slice(0, 5));
   const [busy, setBusy] = useState(false);
@@ -56,11 +57,15 @@ export default function ReminderSettings({ onSaved }: { onSaved?: () => void }) 
 
   return (
     <div className="stack">
-      <label className="field">
-        <span>Nightly reminder</span>
-        <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-      </label>
-      <p className="hint">Timezone: {tz} (detected from this device)</p>
+      {showTime && (
+        <>
+          <label className="field">
+            <span>Nightly reminder</span>
+            <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+          </label>
+          <p className="hint">Timezone: {tz} (detected from this device)</p>
+        </>
+      )}
 
       {needsInstallForPush() ? (
         <InstallSteps />
@@ -72,12 +77,12 @@ export default function ReminderSettings({ onSaved }: { onSaved?: () => void }) 
           <button className="link" onClick={disablePush} disabled={busy}>Turn off</button>
         </div>
       ) : (
-        <button className="btn primary block" onClick={enablePush} disabled={busy}><Icon name="bell" size={16} /> Turn on reminders</button>
+        <button className="btn primary block" onClick={enablePush} disabled={busy}><Icon name="bell" size={16} /> Turn on push notifications</button>
       )}
 
       <ErrorText>{error}</ErrorText>
       {msg && <p className="success">{msg}</p>}
-      <button className="btn block" onClick={() => save()} disabled={busy}>Save reminder time</button>
+      {showTime && <button className="btn block" onClick={() => save()} disabled={busy}>Save reminder time</button>}
     </div>
   );
 }

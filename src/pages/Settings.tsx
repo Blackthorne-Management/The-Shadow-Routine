@@ -7,6 +7,7 @@ import ReminderSettings from '../components/ReminderSettings';
 import { ErrorText, TopBar } from '../components/ui';
 import RankCard from '../components/RankCard';
 import Emblem from '../components/Emblem';
+import NotificationPrefs from '../components/NotificationPrefs';
 
 export default function Settings() {
   const { profile, goals, session, refresh, signOut } = useAuth();
@@ -50,12 +51,16 @@ export default function Settings() {
         <RankCard points={Number(profile.cumulative_cycle_points ?? 0)} sex={profile.sex} />
       )}
 
-      {profile?.role === 'participant' && (
-        <section className="card">
-          <h2>Reminders</h2>
-          <ReminderSettings />
-        </section>
-      )}
+      <section className="card">
+        <h2>{profile?.role === 'admin' ? 'Push notifications' : 'Reminders & push'}</h2>
+        <ReminderSettings showTime={profile?.role === 'participant'} />
+      </section>
+
+      <section className="card" id="notifications">
+        <h2>Notifications</h2>
+        <p className="hint">Pick what you hear about. Each one shows in your inbox (the bell) and, with push on, on your phone.</p>
+        <NotificationPrefs />
+      </section>
 
       {goals.length > 0 && (
         <section className="card">

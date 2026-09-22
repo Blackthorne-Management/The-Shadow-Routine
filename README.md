@@ -38,6 +38,11 @@ Rules that matter for fairness run **in Postgres**, not the browser:
   - Crossing a threshold on check-in shows a Level Up screen.
   - Emblem art goes in `public.emblems.image_url`; until then a placeholder shield is drawn.
 - **Cohort chat:** a `messages` table scoped to `cohort_id` (one cohort today), live via Realtime. Members post as themselves into their own cohort. The mentor can post (labelled Mentor) and delete; nobody edits.
+- **Notifications** (`…10_notifications_global_chat.sql`). App events call `notify()`, which writes to the `notifications` inbox (the bell), only if the recipient's preference for that type is on. A trigger then pushes each new row immediately through `send-reminders` with `{notification_id}`.
+  - Participants hear about: approval, workout reviews, punishments, proof reviews, rewards, cohort chat and Everyone chat, plus the nightly reminder.
+  - The mentor hears about: goal submissions, no-photo workouts, submitted proof and chat.
+  - Everyone picks their types in **Me → Notifications**. Defaults are all on except Everyone chat.
+- **Chat channels:** Cohort (your cohort) and Everyone (all participants, for when there are several cohorts).
 - **Infractions:** a rejected proof logs #1 (a warning, and the participant sees a "talk to your mentor" notice). #2 surfaces a manual **Remove participant** button for the admin.
 
 ## Setup

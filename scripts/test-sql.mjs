@@ -345,4 +345,59 @@ await assert.rejects(as(U1, `select set_rank_path('other')`), /BAD_SEX/);
 assert.equal((await one(`select count(*)::int n from emblems`)).n, 19);
 console.log('✓ ranks: thresholds, cycle totals, rank path');
 
+// --- notifications + global chat -------------------------------------------
+const inbox = async (u, type) => (await db.query(
+  `select * from notifications where user_id=$1 and ($2::text is null or type=$2) order by created_at`, [u, type ?? null])).rows;
+// Goals submitted → admin; approval → participant
+const subsBefore = (await inbox(ADMIN, 'admin_goal_submissions')).length;
+await as(U4, `select submit_goals($1, $2)`, [JSON.stringify(goals), CONSEQ]);
+assert.equal((await inbox(ADMIN, 'admin_goal_submissions')).length, subsBefore + 1, 'admin hears about new goal submissions');
+await as(ADMIN, `select approve_goals($1, '[]')`, [U4]);
+const appr = await inbox(U4, 'approvals');
+assert.equal(appr.length, 1);
+assert.match(appr[0].title, /approved/);
+// Chat: cohort messages fan out to the cohort + mentor, never the sender
+const cohortId = (await one(`select cohort_id from profiles where id=$1`, [U1])).cohort_id;
+await as(U1, `insert into messages (cohort_id, user_id, message_text) values ($1, $2, 'hello cohort')`, [cohortId, U1]);
+assert.equal((await inbox(U1, 'cohort_messages')).length, 0, 'no notification for your own message');
+assert.equal((await inbox(U3, 'cohort_messages')).length, 1);
+assert.equal((await inbox(ADMIN, 'cohort_messages')).length, 1);
+assert.equal((await inbox(U3, 'cohort_messages'))[0].title, 'Cohort · NICK');
+// Global chat is off by default; opting in delivers it
+await as(U1, `insert into messages (channel, cohort_id, user_id, message_text) values ('global', null, $1, 'hello everyone')`, [U1]);
+assert.equal((await inbox(U3, 'global_messages')).length, 0, 'global chat is opt-in');
+await db.query(`insert into notification_settings (user_id, prefs) values ($1, '{"global_messages": true, "cohort_messages": false}')
+  on conflict (user_id) do update set prefs = excluded.prefs`, [U3]);
+await as(U1, `insert into messages (channel, cohort_id, user_id, message_text) values ('global', null, $1, 'second')`, [U1]);
+await as(U1, `insert into messages (cohort_id, user_id, message_text) values ($1, $2, 'muted for U3')`, [cohortId, U1]);
+assert.equal((await inbox(U3, 'global_messages')).length, 1, 'opted in → notified');
+assert.equal((await inbox(U3, 'cohort_messages')).length, 1, 'opted out → no new cohort notifications');
+await assert.rejects(db.query(`insert into messages (channel, cohort_id, user_id, message_text) values ('global', $1, $2, 'x')`, [cohortId, U1]),
+  /messages_channel_cohort/, 'global messages have no cohort');
+// "No photo" asks notify the mentor once, even across re-saves; decisions notify the participant
+const ask = { workout_type: 'Run', minutes: 40, exception_note: 'Forgot my phone' };
+const before4 = (await inbox(ADMIN, 'admin_exceptions')).length;
+await as(U1, `select submit_checkin($1, true, $2)`, [JSON.stringify(entries), JSON.stringify([photo(1), ask])]);
+await as(U1, `select submit_checkin($1, true, $2)`, [JSON.stringify(entries), JSON.stringify([photo(1), ask])]);
+assert.equal((await inbox(ADMIN, 'admin_exceptions')).length, before4 + 1, 'one admin notification per ask');
+const askRow = await one(`select id from workouts where user_id=$1 and status='exception_pending'`, [U1]);
+await as(ADMIN, `select review_workout($1, false, 'Need a photo')`, [askRow.id]);
+assert.match((await inbox(U1, 'workout_reviews')).at(-1).title, /not counted/);
+// Re-saving twice keeps the mentor's rejection (the review survives each re-insert)
+await as(U1, `select submit_checkin($1, true, $2)`, [JSON.stringify(entries), JSON.stringify([photo(1), ask])]);
+await as(U1, `select submit_checkin($1, true, $2)`, [JSON.stringify(entries), JSON.stringify([photo(1), ask])]);
+assert.equal((await one(`select status from workouts where user_id=$1 and position=2`, [U1])).status, 'rejected');
+// Punishments issued + proof reviewed, rewards earned (from the month tests above)
+assert.ok((await inbox(U3, 'punishments')).length >= 20, 'every issued punishment notifies');
+assert.ok((await inbox(U3, 'rewards')).length >= 5, 'every reward notifies');
+const pun3 = await one(`select id from punishments where user_id=$1 and kind='red_week' limit 1`, [U3]);
+await as(U3, `select submit_proof($1, $2, 'done')`, [pun3.id, `${U3}/${pun3.id}/p.jpg`]);
+assert.ok((await inbox(ADMIN, 'admin_proofs')).length >= 1, 'admin hears about submitted proof');
+await as(ADMIN, `select review_proof($1, true, null)`, [pun3.id]);
+assert.equal((await inbox(U3, 'proof_reviews')).at(-1).title, 'Proof accepted');
+// Mark read
+await as(U3, `select mark_notifications_read(null)`);
+assert.equal((await db.query(`select 1 from notifications where user_id=$1 and read_at is null`, [U3])).rows.length, 0);
+console.log('✓ notifications: events, preferences, chat fan-out, dedupe, global chat');
+
 console.log('\nAll SQL tests passed.');

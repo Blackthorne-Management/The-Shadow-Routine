@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { supabase, friendlyError } from '../lib/supabase';
 import { timeAgo } from '../lib/dates';
@@ -8,11 +9,16 @@ import Emblem from '../components/Emblem';
 
 interface Member { id: string; display_name: string; role: string; sex: Sex | null; rank_level: number }
 
-/** Cohort chat: text only, live via Realtime. The admin can post and delete. */
+/**
+ * Chat with two channels: your cohort, and Everyone (all participants, for when
+ * there are several cohorts). Text only, live via Realtime. The admin can post and delete.
+ */
 export default function Chat() {
   const { profile } = useAuth();
   const isAdmin = profile?.role === 'admin';
   const cohort = profile?.cohort_id ?? null;
+  const [params, setParams] = useSearchParams();
+  const channel: 'cohort' | 'global' = params.get('c') === 'global' ? 'global' : 'cohort';
   const [messages, setMessages] = useState<ChatMessage[] | null>(null);
   const [members, setMembers] = useState<Map<string, Member>>(new Map());
   const [text, setText] = useState('');
@@ -27,12 +33,16 @@ export default function Chat() {
 
   useEffect(() => {
     if (!cohort) return;
+    setMessages(null);
     loadMembers();
-    supabase.from('messages').select('*').eq('cohort_id', cohort).order('created_at', { ascending: false }).limit(200)
+    let q = supabase.from('messages').select('*').eq('channel', channel);
+    if (channel === 'cohort') q = q.eq('cohort_id', cohort);
+    q.order('created_at', { ascending: false }).limit(200)
       .then(({ data }) => setMessages(((data as ChatMessage[]) ?? []).reverse()));
 
-    const ch = supabase.channel(`chat-${cohort}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `cohort_id=eq.${cohort}` },
+    const filter = channel === 'cohort' ? `cohort_id=eq.${cohort}` : 'channel=eq.global';
+    const ch = supabase.channel(`chat-${channel}-${cohort}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter },
         (p) => {
           const m = p.new as ChatMessage;
           setMessages((list) => (list?.some((x) => x.id === m.id) ? list : [...(list ?? []), m]));
@@ -42,7 +52,7 @@ export default function Chat() {
         (p) => setMessages((list) => list?.filter((x) => x.id !== (p.old as ChatMessage).id) ?? null))
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [cohort, loadMembers]);
+  }, [cohort, channel, loadMembers]);
 
   useEffect(() => { endRef.current?.scrollIntoView({ block: 'end' }); }, [messages?.length]);
 
@@ -52,7 +62,7 @@ export default function Chat() {
     if (!body || !profile || !cohort) return;
     setBusy(true); setError('');
     const { data, error } = await supabase.from('messages')
-      .insert({ cohort_id: cohort, user_id: profile.id, message_text: body }).select().single();
+      .insert({ channel, cohort_id: channel === 'cohort' ? cohort : null, user_id: profile.id, message_text: body }).select().single();
     setBusy(false);
     if (error) return setError(friendlyError(error));
     setText('');
@@ -68,9 +78,13 @@ export default function Chat() {
 
   return (
     <main className="screen with-tabs chat-screen">
-      <TopBar pill={isAdmin ? 'Mentor view' : 'Cohort'} />
+      <TopBar pill={isAdmin ? 'Mentor view' : 'Chat'} />
+      <div className="seg">
+        <button className={channel === 'cohort' ? 'on' : ''} onClick={() => setParams({})}>Cohort</button>
+        <button className={channel === 'global' ? 'on' : ''} onClick={() => setParams({ c: 'global' })}>Everyone</button>
+      </div>
       {!messages ? <div className="skeleton-list" /> : messages.length === 0 ? (
-        <Empty>No messages yet. Say something to your cohort.</Empty>
+        <Empty>{channel === 'cohort' ? 'No messages yet. Say something to your cohort.' : 'No messages yet. This channel reaches every participant.'}</Empty>
       ) : (
         <ul className="chat-list">
           {messages.map((m) => {
@@ -97,7 +111,7 @@ export default function Chat() {
       <form className="chat-compose" onSubmit={send}>
         <ErrorText>{error}</ErrorText>
         <div className="row gap">
-          <input className="grow" value={text} maxLength={1000} placeholder="Message your cohort"
+          <input className="grow" value={text} maxLength={1000} placeholder={channel === 'cohort' ? 'Message your cohort' : 'Message everyone'}
             onChange={(e) => setText(e.target.value)} aria-label="Message" />
           <button className="btn primary" disabled={busy || !text.trim()}>Send</button>
         </div>

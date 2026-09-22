@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useAuth } from '../lib/auth';
 import type { Band } from '../lib/types';
+import NotificationBell from './NotificationBell';
 
 export function Wordmark() {
   return <span className="wordmark">SHADOW<sup>®</sup></span>;
@@ -11,7 +12,10 @@ export function TopBar({ pill }: { pill?: ReactNode }) {
   return (
     <header className="topbar">
       <Wordmark />
-      {pill != null && <span className="level">{pill}</span>}
+      <div className="row gap">
+        {pill != null && <span className="level">{pill}</span>}
+        <NotificationBell />
+      </div>
     </header>
   );
 }

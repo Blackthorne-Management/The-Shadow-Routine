@@ -27,7 +27,8 @@ export interface Profile {
 
 export interface ChatMessage {
   id: string;
-  cohort_id: string;
+  channel: 'cohort' | 'global';
+  cohort_id: string | null;
   user_id: string;
   message_text: string;
   created_at: string;
@@ -115,6 +116,19 @@ export interface NotificationSettings {
   timezone: string;
   push_subscription: PushSubscriptionJSON | null;
   enabled: boolean;
+  /** per-type notification on/off; missing keys use the default */
+  prefs?: Record<string, boolean>;
+}
+
+export interface AppNotification {
+  id: string;
+  user_id: string;
+  type: string;
+  title: string;
+  body: string | null;
+  url: string;
+  created_at: string;
+  read_at: string | null;
 }
 
 export interface ProgramState {

@@ -17,6 +17,7 @@ import Setup from './pages/Setup';
 import PunishmentPage from './pages/Punishment';
 import RankPath from './pages/RankPath';
 import Chat from './pages/Chat';
+import Notifications from './pages/Notifications';
 // Participants never download the admin dashboard
 const Admin = lazy(() => import('./pages/admin/Admin'));
 
@@ -46,6 +47,7 @@ export default function App() {
           <Route path="/admin/*" element={<Suspense fallback={<Splash />}><Admin /></Suspense>} />
           <Route path="/board" element={<Leaderboard />} />
           <Route path="/chat" element={<Chat />} />
+          <Route path="/notifications" element={<Notifications />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/admin" replace />} />
         </Routes>
@@ -78,6 +80,7 @@ export default function App() {
         <Route path="/checkin" element={<CheckIn />} />
         <Route path="/board" element={<Leaderboard />} />
         <Route path="/chat" element={<Chat />} />
+        <Route path="/notifications" element={<Notifications />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/punishment/:id" element={<PunishmentPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

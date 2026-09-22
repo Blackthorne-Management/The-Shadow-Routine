@@ -1,7 +1,11 @@
 // Supabase Edge Function: send-reminders
-// Called every 5 minutes by pg_cron (see supabase/sql/schedule_reminders.sql).
-// Sends a Web Push to each participant whose local reminder time has arrived,
-// at most once per local day, and skips anyone who's already checked in.
+// Two jobs, both authenticated with the shared x-cron-secret header:
+//  1. Body {} — called every 5 minutes by pg_cron (supabase/sql/schedule_reminders.sql).
+//     Sends the nightly reminder to each participant whose local reminder time has
+//     arrived, at most once per local day, skipping anyone who's already checked in
+//     or who turned the reminder off in their notification settings.
+//  2. Body {notification_id} — called by a database trigger for each new in-app
+//     notification (approvals, reviews, chat…); pushes that one notification.
 //
 // Config comes from Supabase Vault via public.push_config() (service role only):
 //   vapid_public_key, vapid_private_key, vapid_subject, cron_secret
@@ -55,9 +59,12 @@ Deno.serve(async (req) => {
     return new Response('unauthorized', { status: 401 });
   }
 
+  const payload = await req.json().catch(() => ({})) as { notification_id?: string };
+  if (payload.notification_id) return pushOne(payload.notification_id);
+
   const { data: rows, error } = await db
     .from('notification_settings')
-    .select('user_id, reminder_time, timezone, push_subscription, last_notified_on, profiles!inner(status, role)')
+    .select('user_id, reminder_time, timezone, push_subscription, last_notified_on, prefs, profiles!inner(status, role)')
     .eq('enabled', true)
     .not('push_subscription', 'is', null)
     .eq('profiles.status', 'active')
@@ -68,6 +75,7 @@ Deno.serve(async (req) => {
   const results = { checked: rows?.length ?? 0, due: 0, sent: 0, skipped_logged: 0, expired: 0, failed: 0 };
 
   for (const r of rows ?? []) {
+    if ((r.prefs as Record<string, boolean> | null)?.daily_reminder === false) continue;
     let local;
     try { local = localNow(r.timezone, now); } catch { continue; } // bad timezone string
     const [h, m] = String(r.reminder_time).split(':').map(Number);
@@ -105,3 +113,28 @@ Deno.serve(async (req) => {
 
   return Response.json(results);
 });
+
+/** Push a single in-app notification to its recipient's device, if they have push on. */
+async function pushOne(id: string) {
+  const { data: n } = await db.from('notifications').select('id, user_id, type, title, body, url').eq('id', id).maybeSingle();
+  if (!n) return Response.json({ sent: 0, reason: 'not found' });
+  const { data: s } = await db.from('notification_settings').select('push_subscription, enabled')
+    .eq('user_id', n.user_id).maybeSingle();
+  if (!s?.enabled || !s.push_subscription) return Response.json({ sent: 0, reason: 'push off' });
+  try {
+    await webpush.sendNotification(s.push_subscription, JSON.stringify({
+      title: n.title, body: n.body ?? '', url: n.url,
+      // Chat collapses into one notification per channel; everything else stacks
+      tag: n.type.endsWith('_messages') ? `chat-${n.type}` : `n-${n.id}`,
+    }), { TTL: 60 * 60 * 24 });
+    return Response.json({ sent: 1 });
+  } catch (e) {
+    const status = (e as { statusCode?: number }).statusCode;
+    if (status === 404 || status === 410) {
+      await db.from('notification_settings').update({ push_subscription: null, enabled: false }).eq('user_id', n.user_id);
+      return Response.json({ sent: 0, reason: 'subscription expired' });
+    }
+    console.error('push failed', n.user_id, status, (e as Error).message);
+    return Response.json({ sent: 0, reason: 'failed', status }, { status: 502 });
+  }
+}

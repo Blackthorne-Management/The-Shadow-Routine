@@ -117,6 +117,11 @@ Messages use the founder's wording from the original spec text.
 - The admin/mentor can view it and delete messages (basic moderation only).
 - *Plan:* there's one cohort today, so this adds a minimal `cohorts` table with a single cohort and `cohort_id` on profiles, ready for the future multi-cohort build.
 
+## 13. Notifications + global chat (logged, built and deployed 2026-09-22)
+- Notifications for app actions (approvals, rejections/reviews, punishments, rewards, chat), in-app inbox + push.
+- Two chat channels: Cohort and Everyone (global, for the future multi-cohort app).
+- Me → Notifications: per-type toggles. Defaults: everything on except Everyone chat.
+
 ## 8. (Unclear) "We'll graph the punishments"
 - Means a chart of punishments over time? Or writing up the real punishment list? *(Possibly covered now by #6.)*
 
