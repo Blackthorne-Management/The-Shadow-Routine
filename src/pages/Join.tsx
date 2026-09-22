@@ -3,6 +3,8 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { supabase, friendlyError } from '../lib/supabase';
 import { browserTimezone } from '../lib/dates';
 import { ErrorText, TopBar } from '../components/ui';
+import { SexPicker } from './RankPath';
+import type { Sex } from '../lib/types';
 
 export default function Join() {
   const [params] = useSearchParams();
@@ -11,6 +13,7 @@ export default function Join() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [sex, setSex] = useState<Sex | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [checkEmail, setCheckEmail] = useState(false);
@@ -20,6 +23,7 @@ export default function Join() {
     setError('');
     const uname = username.trim().toLowerCase();
     if (password.length < 8) { setError('Password must be at least 8 characters.'); return; }
+    if (!sex) { setError('Pick male or female. It only sets which rank titles you see.'); return; }
     setBusy(true);
 
     // Pre-flight so we can show a clear message (the signup trigger enforces this anyway)
@@ -44,6 +48,7 @@ export default function Join() {
           username: uname,
           display_name: displayName.trim(),
           timezone: browserTimezone(),
+          sex,
         },
         emailRedirectTo: location.origin,
       },
@@ -100,6 +105,10 @@ export default function Join() {
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
                  autoComplete="new-password" minLength={8} required />
         </label>
+        <div className="field">
+          <span>Sex (sets your rank titles, nothing else)</span>
+          <SexPicker value={sex} onChange={setSex} />
+        </div>
         <ErrorText>{error}</ErrorText>
         <button className="btn primary block" disabled={busy}>{busy ? 'Creating account…' : 'Create account'}</button>
       </form>

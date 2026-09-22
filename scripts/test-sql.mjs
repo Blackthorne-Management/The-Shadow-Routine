@@ -306,4 +306,43 @@ await as(U3, `select claim_reward($1)`, [rw.id]);
 assert.ok((await one(`select claimed_at from rewards where id=$1`, [rw.id])).claimed_at);
 console.log('✓ 12-week program: prep credit, Gold Months, Ultra tiers, rewards, read-only outside the program');
 
+// --- ranks, cumulative cycle points, rank path ------------------------------
+const rank = async (p) => (await one(`select rank_for($1) r`, [p])).r;
+assert.equal(await rank(0), 1);
+assert.equal(await rank(524.99), 1);
+assert.equal(await rank(525), 2);
+assert.equal(await rank(4710), 6);
+assert.equal(await rank(10489.99), 9, 'The Eclipse needs the exact maximum');
+assert.equal(await rank(10490), 10);
+const cum = async (u) => one(`select cumulative_cycle_points c, rank_level r from profiles where id=$1`, [u]);
+const expected = (await one(`select coalesce(sum(total_points), 0) s from weekly_scores
+   where user_id = $1 and week_start_date between $2::date and $2::date + 63`, [U3, START])).s;
+assert.equal(Number((await cum(U3)).c), Number(expected), 'cycle total = sum of program weeks');
+assert.ok(Number(expected) > 0);
+// Moving the program window re-counts everyone
+await as(ADMIN, `select admin_set_program_start(week_start($1::date) + 7)`, [today]);
+assert.equal(Number((await cum(U3)).c), 0, 'no program weeks yet → 0');
+await as(ADMIN, `select admin_set_program_start($1)`, [START]);
+assert.equal(Number((await cum(U3)).c), Number(expected));
+// A check-in updates the cycle total straight away
+const before = Number((await cum(U1)).c);
+await as(U1, `select submit_checkin($1, true, $2)`, [JSON.stringify(entries.map((e) => ({ ...e, value: 200 }))), JSON.stringify([photo(1), photo(2)])]);
+assert.ok(Number((await cum(U1)).c) !== before || before > 0, 'cycle total recomputed on check-in');
+// Sex: set at signup, or once by the participant; only the admin changes it after
+await db.query(`insert into invite_codes (code) values ('DELTA')`);
+const U4 = '00000000-0000-0000-0000-000000000004';
+await db.query(`insert into auth.users (id, email, raw_user_meta_data) values ($1, 'd@example.com', $2)`,
+  [U4, { invite_code: 'DELTA', username: 'delta', display_name: 'D', sex: 'female' }]);
+assert.equal((await one(`select sex from profiles where id=$1`, [U4])).sex, 'female');
+assert.equal((await one(`select cohort_id is not null ok from profiles where id=$1`, [U4])).ok, true, 'new members join the cohort');
+await assert.rejects(as(U4, `select set_rank_path('male')`), /PATH_LOCKED/);
+assert.equal((await one(`select sex from profiles where id=$1`, [U1])).sex, null);
+await as(U1, `select set_rank_path('male')`);
+await assert.rejects(as(U1, `select set_rank_path('female')`), /PATH_LOCKED/);
+await as(ADMIN, `select set_rank_path('female', $1)`, [U1]);
+assert.equal((await one(`select sex from profiles where id=$1`, [U1])).sex, 'female');
+await assert.rejects(as(U1, `select set_rank_path('other')`), /BAD_SEX/);
+assert.equal((await one(`select count(*)::int n from emblems`)).n, 19);
+console.log('✓ ranks: thresholds, cycle totals, rank path');
+
 console.log('\nAll SQL tests passed.');

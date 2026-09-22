@@ -4,8 +4,10 @@ import { CATEGORY_ORDER } from '../lib/goals';
 import type { WeeklyScore } from '../lib/types';
 import { BandDot, Empty } from './ui';
 import { Icon } from './Icon';
+import Emblem from './Emblem';
+import type { Sex } from '../lib/types';
 
-interface Row extends WeeklyScore { name: string; move: number }
+interface Row extends WeeklyScore { name: string; move: number; sex: Sex | null; rank_level: number }
 
 /** Ranked list for one week; updates live via Supabase Realtime. */
 export default function LeaderboardList({ week, meId }: { week: string; meId?: string }) {
@@ -16,13 +18,14 @@ export default function LeaderboardList({ week, meId }: { week: string; meId?: s
     const [{ data: scores }, { data: people }] = await Promise.all([
       supabase.from('weekly_scores').select('*').eq('week_start_date', week)
         .order('consistency_rank', { ascending: true }),
-      supabase.from('profiles').select('id,display_name').eq('role', 'participant'),
+      supabase.from('profiles').select('id,display_name,sex,rank_level').eq('role', 'participant'),
     ]);
-    const names = new Map((people ?? []).map((p) => [p.id as string, p.display_name as string]));
+    const byId = new Map((people ?? []).map((p) => [p.id as string, p as { display_name: string; sex: Sex | null; rank_level: number }]));
     const next = ((scores as WeeklyScore[]) ?? []).map((s) => {
       const before = prevRanks.current.get(s.user_id);
       const move = before && s.consistency_rank ? before - s.consistency_rank : 0;
-      return { ...s, name: names.get(s.user_id) ?? 'Unknown', move };
+      const p = byId.get(s.user_id);
+      return { ...s, name: p?.display_name ?? 'Unknown', sex: p?.sex ?? null, rank_level: p?.rank_level ?? 1, move };
     });
     prevRanks.current = new Map(next.map((r) => [r.user_id, r.consistency_rank ?? 0]));
     setRows(next);
@@ -53,6 +56,7 @@ export default function LeaderboardList({ week, meId }: { week: string; meId?: s
             <span className="board-rank">{r.consistency_rank}</span>
             <div className="board-main">
               <div className="board-name">
+                <Emblem level={r.rank_level} sex={r.sex} size={22} />
                 {r.name}
                 {r.user_id === meId && <span className="you">you</span>}
                 {r.is_top_this_week && <span className="level">Most consistent</span>}

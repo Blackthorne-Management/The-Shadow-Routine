@@ -11,7 +11,7 @@ export const supabase = createClient(url ?? 'http://localhost', key ?? 'missing'
 
 // Columns participants may read on profiles (email is hidden by column grants,
 // so `select('*')` would fail — always use this list).
-export const PROFILE_COLUMNS = 'id,username,display_name,role,status,timezone,activated_at,created_at';
+export const PROFILE_COLUMNS = 'id,username,display_name,role,status,timezone,activated_at,created_at,sex,cohort_id,cumulative_cycle_points,rank_level';
 
 /** Turns Postgres RAISE codes from our SQL functions into readable messages. */
 export function friendlyError(err: unknown): string {
@@ -38,6 +38,8 @@ export function friendlyError(err: unknown): string {
     MUST_BE_MONDAY: 'Program week 1 has to start on a Monday.',
     MONTH_NOT_OVER: "That month isn't over yet.",
     PROGRAM_NOT_SET: 'Set the program start date first.',
+    PATH_LOCKED: 'Your rank path is already set. Ask your mentor to change it.',
+    BAD_SEX: 'Pick male or female.',
     'Invalid login credentials': 'Wrong email or password.',
   };
   for (const [code, text] of Object.entries(map)) if (msg.includes(code)) return text;

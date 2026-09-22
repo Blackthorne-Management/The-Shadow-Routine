@@ -5,6 +5,8 @@ import { describeTarget } from '../lib/goals';
 import { ThemeIcon } from '../components/Icon';
 import ReminderSettings from '../components/ReminderSettings';
 import { ErrorText, TopBar } from '../components/ui';
+import RankCard from '../components/RankCard';
+import Emblem from '../components/Emblem';
 
 export default function Settings() {
   const { profile, goals, session, refresh, signOut } = useAuth();
@@ -31,6 +33,22 @@ export default function Settings() {
   return (
     <main className="screen with-tabs">
       <TopBar pill={`@${profile?.username}`} />
+      {profile && (
+        <section className="card profile-head">
+          <div className="row gap">
+            {profile.role === 'admin'
+              ? <span className="level">Mentor</span>
+              : <Emblem level={profile.rank_level} sex={profile.sex} size={44} />}
+            <div>
+              <h1>{profile.display_name}</h1>
+              <p className="muted small">@{profile.username}</p>
+            </div>
+          </div>
+        </section>
+      )}
+      {profile?.role === 'participant' && (
+        <RankCard points={Number(profile.cumulative_cycle_points ?? 0)} sex={profile.sex} />
+      )}
 
       {profile?.role === 'participant' && (
         <section className="card">

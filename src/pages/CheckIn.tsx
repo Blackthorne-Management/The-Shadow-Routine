@@ -7,6 +7,8 @@ import { formatDay } from '../lib/dates';
 import type { Goal, TodayContext, WeeklyScore, Workout } from '../lib/types';
 import { ErrorText, Splash } from '../components/ui';
 import MediaThumb from '../components/MediaThumb';
+import RankCard, { LevelUp } from '../components/RankCard';
+import type { Sex } from '../lib/types';
 
 interface Answer { value: number | null; details?: Record<string, unknown> }
 
@@ -16,8 +18,10 @@ const MAX_MB = 50; // Supabase free-tier per-file limit
 type Step = { kind: 'goal'; goal: Goal } | { kind: 'bonus' } | { kind: 'review' };
 
 export default function CheckIn() {
-  const { profile, goals } = useAuth();
+  const { profile, goals, refresh } = useAuth();
   const navigate = useNavigate();
+  const [rank, setRank] = useState<{ before: number; after: number; levelBefore: number; levelAfter: number } | null>(null);
+  const [celebrated, setCelebrated] = useState(false);
   const [ctx, setCtx] = useState<TodayContext | null>(null);
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
   // null = workout question not answered yet; [] = "No, didn't work out"
@@ -27,6 +31,7 @@ export default function CheckIn() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<WeeklyScore | null>(null);
+  const [submitted, setSubmitted] = useState(false);
   const [editing, setEditing] = useState(false);
 
   useEffect(() => {
@@ -76,6 +81,8 @@ export default function CheckIn() {
 
   async function submit() {
     setBusy(true); setError('');
+    const readRank = async () => (await supabase.from('profiles').select('cumulative_cycle_points,rank_level').eq('id', profile!.id).single()).data;
+    const pre = await readRank();
     const entries = goals.filter((g) => g.category !== 'gym').map((g) => ({
       goal_id: g.id,
       value: answers[g.id]?.value ?? 0,
@@ -85,13 +92,26 @@ export default function CheckIn() {
       ({ workout_type, minutes, media_path, exception_note })) ?? [];
     const { error } = await supabase.rpc('submit_checkin', { p_entries: entries, p_bonus: ctx!.challenge ? bonus : null, p_workouts });
     if (error) { setBusy(false); setError(friendlyError(error)); return; }
-    const { data } = await supabase.from('weekly_scores').select('*')
-      .eq('user_id', profile!.id).eq('week_start_date', ctx!.week_start).maybeSingle();
+    const [{ data }, post] = await Promise.all([
+      supabase.from('weekly_scores').select('*').eq('user_id', profile!.id).eq('week_start_date', ctx!.week_start).maybeSingle(),
+      readRank(),
+    ]);
+    setRank({
+      before: Number(pre?.cumulative_cycle_points ?? 0), after: Number(post?.cumulative_cycle_points ?? 0),
+      levelBefore: pre?.rank_level ?? 1, levelAfter: post?.rank_level ?? 1,
+    });
     setBusy(false);
-    setResult(data as WeeklyScore);
+    setResult((data as WeeklyScore) ?? null);
+    setSubmitted(true);
+    refresh();
   }
 
-  if (result) return <Done score={result} edited={editing} />;
+  if (submitted) {
+    if (rank && rank.levelAfter > rank.levelBefore && !celebrated) {
+      return <LevelUp level={rank.levelAfter} sex={profile.sex} onDone={() => setCelebrated(true)} />;
+    }
+    return <Done score={result} edited={editing} rank={rank} sex={profile.sex} />;
+  }
 
   const unanswered = goals.filter((g) => (g.category === 'gym' ? workouts == null : answers[g.id]?.value == null));
 
@@ -388,7 +408,9 @@ function formatWorkouts(w: Workout[] | null) {
   return `${w.length} workout${w.length === 1 ? '' : 's'}${asks ? ` (${asks} for mentor)` : ''}`;
 }
 
-function Done({ score, edited }: { score: WeeklyScore | null; edited: boolean }) {
+function Done({ score, edited, rank, sex }: {
+  score: WeeklyScore | null; edited: boolean; rank: { before: number; after: number } | null; sex: Sex | null;
+}) {
   return (
     <main className="screen">
       <div className="linked" style={{ flex: 1 }}>
@@ -406,6 +428,7 @@ function Done({ score, edited }: { score: WeeklyScore | null; edited: boolean })
             </p>
           </section>
         )}
+        {rank && <RankCard points={rank.after} from={rank.before} sex={sex} />}
       </div>
       <div className="row gap">
         <Link to="/board" className="btn grow">Leaderboard</Link>

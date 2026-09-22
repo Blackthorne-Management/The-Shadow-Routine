@@ -2,7 +2,7 @@
 
 Changes requested during review and testing.
 
-> **Status (2026-09-22): items 1–7 are implemented, tested and deployed** (migration `…08_program_workouts_months.sql`).
+> **Status (2026-09-22): items 1–7 and 9–12 are implemented, tested and deployed** (migrations `…08` and `…09`).
 > Item 8 is still unclear and not built. New requests get logged below and wait for the next go-ahead.
 
 *Consolidated 2026-09-22 after several rounds of answers. Each item shows the current decision; earlier versions are summarized at the end.*
@@ -88,6 +88,34 @@ Messages use the founder's wording from the original spec text.
 ## 7. Rewards are self-granted
 - An earned reward shows up in the app ("You earned it: Spa Day. Grant yourself!").
 - **No proof needed.** An optional "Mark as claimed" is there for anyone who wants it. Claiming isn't required.
+
+## 9–12. Feature batch from `shadow-routine-feature-prompt.md` (logged 2026-09-22, built + deployed the same day)
+
+**9. Signup sex field (male / female).** Required at signup, stored on the profile. It only picks which rank titles a user sees; nothing else uses it.
+- *Plan:* existing accounts get a one-time "pick your path" prompt the next time they open the app.
+
+**10. Rank/level system: `cumulative_cycle_points`.** The sum of every program week's `total_points` across the 10-week cycle. It's separate from the weekly leaderboard, which stays as-is, and it resets only on a new cycle.
+- **Levels** (threshold → male title / female title):
+  1. 0 → Shadow Initiate
+  2. 525 → Shadow Apprentice
+  3. 1,350 → Ronin / Huntress
+  4. 2,350 → Blade / Oracle
+  5. 3,475 → Berserker / Valkyrie
+  6. 4,710 → Marshal / Matriarch
+  7. 6,035 → Warlord / Empress
+  8. 7,450 → Regent / Sovereign
+  9. 8,935 → King / Queen
+  10. exactly 10,490 → **The Eclipse** (shared)
+- Recomputed on every check-in. Crossing a threshold shows a **Level Up** screen with the new title before the normal confirmation, and the cumulative bar animates upward.
+- *Plan:* only program weeks 1–10 count (prep weeks aren't in the metrics), so the max is 10 × 1,049 = 10,490, matching the table.
+
+**11. Rank emblems (placeholder art).** An `emblems` table: `rank_level` 1–10, `path` male | female | shared (shared only for level 10), `image_url` nullable. Show a placeholder graphic until the real AI art arrives.
+- Shown next to the name on the user's own profile and on their leaderboard row.
+
+**12. Cohort chat.** Text-only chat scoped to the cohort, in a `messages` table (id, cohort_id, user_id, message_text, created_at).
+- Live via Realtime, on its own tab, with the sender's name + emblem on each message.
+- The admin/mentor can view it and delete messages (basic moderation only).
+- *Plan:* there's one cohort today, so this adds a minimal `cohorts` table with a single cohort and `cohort_id` on profiles, ready for the future multi-cohort build.
 
 ## 8. (Unclear) "We'll graph the punishments"
 - Means a chart of punishments over time? Or writing up the real punishment list? *(Possibly covered now by #6.)*

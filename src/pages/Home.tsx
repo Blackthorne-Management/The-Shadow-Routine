@@ -6,6 +6,7 @@ import { describeTarget } from '../lib/goals';
 import { addDays, formatDay, formatWeek, timeLeftToday } from '../lib/dates';
 import type { Band, Infraction, MonthStatus, MonthlyResult, Punishment, Reward, TodayContext, WeeklyScore } from '../lib/types';
 import MonthPanel from '../components/MonthPanel';
+import RankCard from '../components/RankCard';
 import { ProgressBar, Splash, TickMeter, TopBar } from '../components/ui';
 import { Icon, ThemeIcon } from '../components/Icon';
 
@@ -97,6 +98,8 @@ export default function Home() {
           )}
         </section>
       </div>
+
+      <RankCard points={Number(profile.cumulative_cycle_points ?? 0)} sex={profile.sex} />
 
       {notices.map((n) => (
         <div key={n.id} className="notice red">

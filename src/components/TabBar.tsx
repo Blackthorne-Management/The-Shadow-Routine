@@ -8,7 +8,8 @@ export default function TabBar({ admin = false }: { admin?: boolean }) {
   const tabs = [
     admin ? { to: '/admin', label: 'Admin' } : { to: '/', label: 'Today' },
     { to: '/board', label: 'Board' },
-    { to: '/settings', label: 'Settings' },
+    { to: '/chat', label: 'Chat' },
+    { to: '/settings', label: 'Me' },
   ];
 
   return (

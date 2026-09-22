@@ -6,6 +6,7 @@ export type Theme = 'gym' | 'refraining' | 'reading' | 'nutrition' | 'schedule' 
 export type Band = 'green' | 'gray' | 'red';
 export type ProofType = 'photo' | 'video' | 'mentor_conversation';
 export type ProofStatus = 'pending' | 'accepted' | 'rejected';
+export type Sex = 'male' | 'female';
 
 export interface Profile {
   id: string;
@@ -15,6 +16,20 @@ export interface Profile {
   status: UserStatus;
   timezone: string;
   activated_at: string | null;
+  created_at: string;
+  /** picks the rank-title path only */
+  sex: Sex | null;
+  cohort_id: string | null;
+  /** running total over program weeks 1–10 (max 10,490) */
+  cumulative_cycle_points: number;
+  rank_level: number;
+}
+
+export interface ChatMessage {
+  id: string;
+  cohort_id: string;
+  user_id: string;
+  message_text: string;
   created_at: string;
 }
 

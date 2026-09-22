@@ -15,6 +15,8 @@ import Leaderboard from './pages/Leaderboard';
 import Settings from './pages/Settings';
 import Setup from './pages/Setup';
 import PunishmentPage from './pages/Punishment';
+import RankPath from './pages/RankPath';
+import Chat from './pages/Chat';
 // Participants never download the admin dashboard
 const Admin = lazy(() => import('./pages/admin/Admin'));
 
@@ -43,6 +45,7 @@ export default function App() {
         <Routes>
           <Route path="/admin/*" element={<Suspense fallback={<Splash />}><Admin /></Suspense>} />
           <Route path="/board" element={<Leaderboard />} />
+          <Route path="/chat" element={<Chat />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/admin" replace />} />
         </Routes>
@@ -50,6 +53,9 @@ export default function App() {
       </>
     );
   }
+
+  // Accounts from before the rank system pick their path once
+  if (!profile.sex) return <RankPath />;
 
   if (profile.status === 'pending_approval') {
     const proposed = goals.length === 5;
@@ -71,6 +77,7 @@ export default function App() {
         <Route path="/" element={needsSetup ? <Navigate to="/setup" replace /> : <Home />} />
         <Route path="/checkin" element={<CheckIn />} />
         <Route path="/board" element={<Leaderboard />} />
+        <Route path="/chat" element={<Chat />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/punishment/:id" element={<PunishmentPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

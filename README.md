@@ -33,6 +33,11 @@ Rules that matter for fairness run **in Postgres**, not the browser:
   - Check-ins are blocked before week 1 and after week 10 (read-only).
 - **Workouts:** each 30+ minute session is its own row and needs a photo/clip. With no photo, the participant asks the mentor, and it counts only if accepted. The mentor can reject any photo in **Admin → Workouts**, which re-scores the week.
 - **Consequences:** each goal's red-week punishment, Gold reward and 3-Gold reward, plus the Ultra Punishment and "one wish", are written at signup and approved or edited by the mentor. Rewards are self-granted, and "Mark claimed" is optional.
+- **Ranks** (`…09_ranks_emblems_chat.sql`). `cumulative_cycle_points` is the sum of every program week's `total_points` (max 10 × 1,049 = 10,490). It's separate from the weekly leaderboard and kept in sync by a trigger on `weekly_scores`.
+  - 10 ranks, from Shadow Initiate (0) to The Eclipse (exactly 10,490). Levels 3–9 use male or female titles, chosen at signup; existing accounts pick once.
+  - Crossing a threshold on check-in shows a Level Up screen.
+  - Emblem art goes in `public.emblems.image_url`; until then a placeholder shield is drawn.
+- **Cohort chat:** a `messages` table scoped to `cohort_id` (one cohort today), live via Realtime. Members post as themselves into their own cohort. The mentor can post (labelled Mentor) and delete; nobody edits.
 - **Infractions:** a rejected proof logs #1 (a warning, and the participant sees a "talk to your mentor" notice). #2 surfaces a manual **Remove participant** button for the admin.
 
 ## Setup
