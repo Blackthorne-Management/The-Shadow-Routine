@@ -30,6 +30,12 @@ export interface Goal {
   unit: string;
   category_point_max: number;
   status: 'pending_approval' | 'approved';
+  /** consequences written with the coach at signup, approved by the mentor */
+  red_week_punishment: string | null;
+  gold_reward: string | null;
+  three_gold_reward: string | null;
+  /** monthly total needed for a Gold Month; null = 80% of 4 weeks */
+  gold_month_target: number | null;
 }
 
 export interface CategoryScore {
@@ -63,7 +69,8 @@ export interface WeeklyScore {
 export interface Punishment {
   id: string;
   user_id: string;
-  category: Category;
+  kind: 'red_week' | 'ultra';
+  category: Category | null;
   week_start_date: string;
   punishment_description: string;
   proof_type: ProofType;
@@ -95,9 +102,78 @@ export interface NotificationSettings {
   enabled: boolean;
 }
 
+export interface ProgramState {
+  status: 'unset' | 'prep' | 'active' | 'ended';
+  start_date?: string;
+  end_date?: string;
+  program_week?: number;
+  month?: number | null;
+  week_of_month?: number | null;
+}
+
+export type WorkoutStatus = 'approved' | 'exception_pending' | 'exception_accepted' | 'rejected';
+
+export interface Workout {
+  id?: string;
+  user_id?: string;
+  entry_date?: string;
+  position?: number;
+  workout_type: string;
+  minutes: number;
+  media_path: string | null;
+  exception_note: string | null;
+  status?: WorkoutStatus;
+  review_note?: string | null;
+  created_at?: string;
+}
+
+export interface MonthWeek { label: string; band: Band | null; state: 'prep' | 'closed' | 'current' | 'future'; actual: number }
+
+export interface MonthGoal {
+  category: Category;
+  label: string;
+  target: number;
+  gold_target: number;
+  month_total: number;
+  month_max: number;
+  pct: number;
+  greens: number;
+  grays: number;
+  reds: number;
+  closed_weeks: number;
+  weeks: MonthWeek[];
+  gold_status: 'on_track' | 'lost';
+  gold_reward: string | null;
+}
+
+export type MonthStatus = ProgramState & { goals: MonthGoal[] };
+
+export interface Reward {
+  id: string;
+  user_id: string;
+  month_number: number;
+  kind: 'gold_month' | 'three_gold' | 'ultra_wish';
+  category: Category | null;
+  description: string;
+  claimed_at: string | null;
+  created_at: string;
+}
+
+export interface MonthlyResult {
+  id: string;
+  user_id: string;
+  month_number: number;
+  goals: Partial<Record<Category, { label: string; pct: number; total: number; gold_target: number; greens: number; grays: number; reds: number; gold: boolean }>>;
+  avg_pct: number;
+  ultra_tier: 'gold' | 'green' | 'gray' | 'red';
+  created_at: string;
+}
+
 export interface TodayContext {
   date: string;
   week_start: string;
+  program: ProgramState;
+  workouts: Workout[];
   challenge: { id: string; description: string; point_value: number } | null;
   bonus_completed: boolean | null;
   entries: { goal_id: string; value: number; notes: string | null; details: Record<string, unknown> | null }[];

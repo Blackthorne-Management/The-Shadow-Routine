@@ -11,7 +11,7 @@
 -- The secrets live encrypted in Vault; the Edge Function reads them through
 -- public.push_config() (service role only) and pg_cron reads them here.
 -- ============================================================================
-create extension if not exists pg_net;
+create extension if not exists pg_net with schema extensions;
 
 select vault.create_secret('https://YOUR-PROJECT-REF.supabase.co', 'project_url');
 select vault.create_secret('REPLACE-WITH-VAPID-PUBLIC-KEY',        'vapid_public_key');

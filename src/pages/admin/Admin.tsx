@@ -7,15 +7,19 @@ import Bonus from './Bonus';
 import Library from './Library';
 import Proofs from './Proofs';
 import People from './People';
+import Workouts from './Workouts';
+import Program from './Program';
 
 const TABS = [
   { to: '', label: 'Live' },
   { to: 'approvals', label: 'Approvals' },
+  { to: 'workouts', label: 'Workouts' },
   { to: 'proofs', label: 'Proof' },
   { to: 'people', label: 'People' },
   { to: 'invites', label: 'Invites' },
   { to: 'bonus', label: 'Bonus' },
-  { to: 'library', label: 'Punishments' },
+  { to: 'program', label: 'Program' },
+  { to: 'library', label: 'Fallbacks' },
 ];
 
 export default function Admin() {
@@ -30,7 +34,9 @@ export default function Admin() {
       <Routes>
         <Route index element={<Overview />} />
         <Route path="approvals" element={<Approvals />} />
+        <Route path="workouts" element={<Workouts />} />
         <Route path="proofs" element={<Proofs />} />
+        <Route path="program" element={<Program />} />
         <Route path="people" element={<People />} />
         <Route path="invites" element={<Invites />} />
         <Route path="bonus" element={<Bonus />} />

@@ -7,7 +7,7 @@ export const CATEGORY_POINTS: Record<Category, number> = {
 };
 
 export const CATEGORY_NAMES: Record<Category, string> = {
-  gym: 'Gym', refraining: 'Refraining', custom_1: 'Custom 1', custom_2: 'Custom 2', custom_3: 'Custom 3',
+  gym: 'Workouts', refraining: 'Refraining', custom_1: 'Custom 1', custom_2: 'Custom 2', custom_3: 'Custom 3',
 };
 
 export const THEME_NAMES: Record<Theme, string> = {
@@ -32,7 +32,7 @@ export const CUSTOM_SUGGESTIONS: {
  * proposing and the admin can rewrite it at approval — it's stored per goal.
  */
 export function defaultPrompt(g: { category: Category; theme: Theme; goal_type: GoalType; label: string; unit: string }): string {
-  if (g.category === 'gym') return 'Did you complete a workout today (30+ minutes)?';
+  if (g.category === 'gym') return 'Did you work out for 30 minutes or more today?';
   if (g.category === 'refraining') {
     const vice = g.label.trim().replace(/^(no|avoid|quit|stop|zero)\s+/i, '').toLowerCase();
     return vice ? `Did you avoid ${vice} today?` : 'Did you stay clean today?';
@@ -59,3 +59,16 @@ export function describeTarget(g: Pick<Goal, 'goal_type' | 'target_value' | 'uni
 
 export const sortGoals = <T extends { category: Category }>(goals: T[]) =>
   [...goals].sort((a, b) => CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category));
+
+/** Monthly total needed for a Gold Month (80% of 4 weeks unless the mentor set one). */
+export const goldTarget = (g: Pick<Goal, 'target_value' | 'gold_month_target'>) =>
+  g.gold_month_target ?? Math.ceil(0.8 * 4 * Number(g.target_value));
+
+export const MONTH_WEEKS: Record<number, string> = { 1: 'Prep + weeks 1–2', 2: 'Weeks 3–6', 3: 'Weeks 7–10' };
+
+export const ULTRA_TIERS = {
+  gold:  { name: 'Ultra Gold',  message: 'At least 80% in every goal with no gray weeks. Grant yourself one wish!' },
+  green: { name: 'Ultra Green', message: 'At least 75% in every goal, no more than one gray week. You stayed on track. Good job!' },
+  gray:  { name: 'Ultra Gray',  message: 'The embodiment of just showing up. This is your participation trophy. Be disappointed, lock in, and do better!' },
+  red:   { name: 'Ultra Red',   message: 'Short of an emergency or life-altering event, there is no excuse for this. You need to do so much better.' },
+} as const;

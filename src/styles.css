@@ -427,3 +427,34 @@ textarea { resize: vertical; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ---------- program: consequences, workouts, months ---------- */
+.stakes { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid var(--panel-line); }
+.center-stepper { display: flex; align-items: center; justify-content: center; gap: 24px; padding: 12px 0; }
+.center-stepper button {
+  width: 64px; height: 64px; border-radius: 50%; border: 1.5px solid var(--ink); background: transparent;
+  font-size: 30px; font-weight: 300;
+}
+.center-stepper button:disabled { opacity: .3; }
+.center-stepper output { font-size: 84px; font-weight: 300; letter-spacing: -0.04em; min-width: 80px; text-align: center; }
+.file-drop.paper { border-color: var(--ink-line); color: var(--ink-muted); }
+.media-picked { display: flex; align-items: center; gap: 14px; padding: 12px; border: 1.5px solid var(--ink); border-radius: var(--r-md); }
+.media-picked label { cursor: pointer; }
+.thumb { display: block; object-fit: cover; border-radius: 12px; background: var(--panel); flex: none; }
+.month-goals { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; }
+.month-goals li { display: flex; flex-direction: column; gap: 7px; }
+.month-weeks { display: flex; align-items: center; gap: 4px; }
+.month-weeks .bar { margin-left: 6px; }
+.wk {
+  width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center;
+  font-size: 10px; font-weight: 700; color: var(--ink); flex: none;
+}
+.wk.band-none { background: var(--panel-2); color: var(--on-panel-muted); box-shadow: none; }
+.wk.current { outline: 1.5px solid var(--lav); outline-offset: 1px; }
+.wk.future { opacity: .45; }
+.tier-card { border-radius: var(--r-md); padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; border: 1.5px solid var(--ink); }
+.tier-gold { background: var(--lav); border-color: var(--lav); color: var(--lav-ink); }
+.tier-green { background: var(--mint); border-color: var(--mint); }
+.tier-gray { background: var(--paper-2); }
+.tier-red { background: var(--coral); border-color: var(--coral); }
+.program-dates { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 2px; }

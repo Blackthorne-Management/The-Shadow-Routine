@@ -64,14 +64,23 @@ await assert.rejects(as(U1, `update profiles set status='active' where id=$1`, [
 console.log('✓ profile guard');
 
 // --- goals ------------------------------------------------------------------
+const stakes = (c) => ({ red_week_punishment: `${c}: 500 burpees`, gold_reward: `${c}: spa day`, three_gold_reward: `${c}: wardrobe` });
 const goals = [
-  { category: 'gym', theme: 'gym', goal_type: 'binary', label: 'Workout 4x, 30+ min', prompt: 'Did you complete a workout today (30+ minutes)?', target_value: 4, unit: 'workouts' },
-  { category: 'refraining', theme: 'refraining', goal_type: 'inverse', label: 'No alcohol', prompt: 'Did you avoid alcohol today?', target_value: 7, unit: 'days' },
-  { category: 'custom_1', theme: 'reading', goal_type: 'percentage', label: 'Read 200 pages', prompt: 'How many pages did you read today?', target_value: 200, unit: 'pages' },
-  { category: 'custom_2', theme: 'content', goal_type: 'binary', label: 'Post 5x', prompt: 'Did you post today?', target_value: 5, unit: 'days' },
-  { category: 'custom_3', theme: 'word', goal_type: 'binary', label: 'Keep my word', prompt: 'Did you keep every promise today?', target_value: 7, unit: 'days' },
+  { category: 'gym', theme: 'gym', goal_type: 'binary', label: '4 workouts / week', prompt: 'x', target_value: 4, unit: 'workouts', ...stakes('gym') },
+  { category: 'refraining', theme: 'refraining', goal_type: 'inverse', label: 'No alcohol', prompt: 'Did you avoid alcohol today?', target_value: 7, unit: 'days', ...stakes('refraining') },
+  { category: 'custom_1', theme: 'reading', goal_type: 'percentage', label: 'Read 200 pages', prompt: 'How many pages did you read today?', target_value: 200, unit: 'pages', ...stakes('reading') },
+  { category: 'custom_2', theme: 'content', goal_type: 'binary', label: 'Post 5x', prompt: 'Did you post today?', target_value: 5, unit: 'days', ...stakes('content') },
+  { category: 'custom_3', theme: 'word', goal_type: 'binary', label: 'Keep my word', prompt: 'Did you keep every promise today?', target_value: 7, unit: 'days', ...stakes('word') },
 ];
-for (const u of [U1, U2]) await as(u, `select submit_goals($1)`, [JSON.stringify(goals)]);
+const CONSEQ = JSON.stringify({ ultra_punishment: 'Shave head', ultra_wish: 'One wish' });
+await assert.rejects(as(U1, `select submit_goals($1, null)`, [JSON.stringify(goals)]), /NEED_CONSEQUENCES/);
+await assert.rejects(as(U1, `select submit_goals($1, $2)`,
+  [JSON.stringify(goals.map((g, i) => (i === 3 ? { ...g, gold_reward: '' } : g))), CONSEQ]), /NEED_CONSEQUENCES/);
+for (const u of [U1, U2]) await as(u, `select submit_goals($1, $2)`, [JSON.stringify(goals), CONSEQ]);
+const gymRow = await one(`select goal_type, unit, prompt from goals where user_id=$1 and category='gym'`, [U1]);
+assert.equal(gymRow.goal_type, 'percentage', 'workouts are counted, not yes/no');
+assert.match(gymRow.prompt, /30 minutes or more/);
+assert.equal((await one(`select ultra_punishment from consequences where user_id=$1`, [U1])).ultra_punishment, 'Shave head');
 assert.equal((await one(`select count(*)::int n from goals where user_id=$1`, [U1])).n, 5);
 assert.equal((await one(`select category_point_max m from goals where user_id=$1 and category='gym'`, [U1])).m, 300);
 await assert.rejects(as(U1, `select submit_checkin('[]', null)`), /NOT_ACTIVE/);
@@ -82,7 +91,7 @@ await as(ADMIN, `select approve_goals($1, $2)`, [U1, JSON.stringify([{ id: gymId
 await as(ADMIN, `select approve_goals($1, '[]')`, [U2]);
 assert.equal((await one(`select target_value::int t from goals where id=$1`, [gymId])).t, 5);
 assert.equal((await one(`select status from profiles where id=$1`, [U1])).status, 'active');
-await assert.rejects(as(U1, `select submit_goals($1)`, [JSON.stringify(goals)]), /GOALS_LOCKED/);
+await assert.rejects(as(U1, `select submit_goals($1, $2)`, [JSON.stringify(goals), CONSEQ]), /GOALS_LOCKED/);
 console.log('✓ goal proposal + admin approval');
 
 // Just approved, nothing logged yet: pace is neutral (not red), because days
@@ -103,12 +112,42 @@ const entries = [
   { goal_id: g1.custom_2, value: 0 },
   { goal_id: g1.custom_3, value: 1 },
 ];
-await as(U1, `select submit_checkin($1, true)`, [JSON.stringify(entries)]);
-// same-day edit overwrites instead of duplicating
+const photo = (n) => ({ workout_type: 'Lift', minutes: 45, media_path: `${U1}/workouts/today-${n}.jpg` });
+// Workout rules: 30+ minutes, and a photo or an exception note
+await assert.rejects(as(U1, `select submit_checkin($1, true, $2)`,
+  [JSON.stringify(entries), JSON.stringify([{ workout_type: 'Cardio', minutes: 20, media_path: `${U1}/workouts/a.jpg` }])]), /WORKOUT_TOO_SHORT/);
+await assert.rejects(as(U1, `select submit_checkin($1, true, $2)`,
+  [JSON.stringify(entries), JSON.stringify([{ workout_type: 'Run', minutes: 40 }])]), /WORKOUT_NEEDS_PHOTO/);
+await assert.rejects(as(U1, `select submit_checkin($1, true, $2)`,
+  [JSON.stringify(entries), JSON.stringify([{ workout_type: 'Run', minutes: 40, media_path: `${U2}/workouts/x.jpg` }])]), /BAD_PATH/);
+await as(U1, `select submit_checkin($1, true, $2)`, [JSON.stringify(entries), JSON.stringify([photo(1)])]);
+// same-day edit overwrites instead of duplicating — and two workouts in a day both count
 entries[2].value = 50;
-await as(U1, `select submit_checkin($1, true)`, [JSON.stringify(entries)]);
+await as(U1, `select submit_checkin($1, true, $2)`, [JSON.stringify(entries),
+  JSON.stringify([photo(1), photo(2), { workout_type: 'Walk', minutes: 30, exception_note: 'Phone died' }])]);
 assert.equal((await one(`select count(*)::int n from daily_entries where user_id=$1`, [U1])).n, 5);
-const live = await one(`select * from weekly_scores where user_id=$1`, [U1]);
+assert.equal((await one(`select count(*)::int n from workouts where user_id=$1`, [U1])).n, 3);
+let live = await one(`select * from weekly_scores where user_id=$1`, [U1]);
+assert.equal(Number(live.category_scores.gym.actual), 2, 'photo workouts count; the exception waits for the mentor');
+// Mentor accepts the exception → counts; rejects a photo → stops counting
+const exc = await one(`select id from workouts where user_id=$1 and status='exception_pending'`, [U1]);
+await assert.rejects(as(U1, `select review_workout($1, true, null)`, [exc.id]), /ADMIN_ONLY/);
+await as(ADMIN, `select review_workout($1, true, 'ok')`, [exc.id]);
+const pic = await one(`select id from workouts where user_id=$1 and position=1`, [U1]);
+await as(ADMIN, `select review_workout($1, false, 'not you')`, [pic.id]);
+live = await one(`select * from weekly_scores where user_id=$1`, [U1]);
+assert.equal(Number(live.category_scores.gym.actual), 2, '3 logged − 1 rejected photo');
+// Re-saving today keeps the mentor's decisions on unchanged workouts
+await as(U1, `select submit_checkin($1, true, $2)`, [JSON.stringify(entries),
+  JSON.stringify([photo(1), photo(2), { workout_type: 'Walk', minutes: 30, exception_note: 'Phone died' }])]);
+assert.deepEqual((await db.query(`select status from workouts where user_id=$1 order by position`, [U1])).rows.map((r) => r.status),
+  ['rejected', 'approved', 'exception_accepted']);
+// Mid-week colors are never red
+for (const r of (await db.query(`select pace_band_per_category p from weekly_scores ws
+    where ws.week_start_date = week_start((now() at time zone 'UTC')::date)`)).rows) {
+  assert.ok(!Object.values(r.p).includes('red'), `mid-week pace must not be red: ${JSON.stringify(r.p)}`);
+}
+console.log('✓ workouts: 30-minute rule, photo or exception, multiple per day, mentor review');
 assert.equal(Number(live.category_scores.custom_1.actual), 50);
 assert.equal(live.bonus_points, 7);
 assert.equal(live.consistency_rank, 1);
@@ -147,7 +186,9 @@ assert.equal(s.is_top_this_week, true);
 assert.equal(created, 6);
 const pun = await one(`select * from punishments where user_id=$1`, [U1]);
 assert.equal(pun.category, 'refraining');
-assert.match(pun.punishment_description, /reflection/);
+assert.equal(pun.punishment_description, 'refraining: 500 burpees', "a red week uses the goal's own punishment");
+assert.equal(pun.proof_type, 'photo');
+assert.equal(pun.kind, 'red_week');
 assert.equal((await one(`select finalize_week($1::date) n`, [W])).n, 0, 'finalize is idempotent');
 console.log('✓ weekly scoring math, bands, bonus cap, punishments');
 
@@ -199,5 +240,70 @@ console.log('✓ proof review, infractions, removal');
 await as(null, `update profiles set activated_at = '2026-09-10' where id=$1`, [U1]);
 assert.equal((await one(`select finalize_week('2026-09-07'::date) n`)).n, 0);
 console.log('✓ partial-week exemption');
+
+// --- the 12-week program: prep, months, Gold, Ultra -------------------------
+// Put "today" in program week 8: months 1 and 2 are over, month 3 is running.
+const U3 = '00000000-0000-0000-0000-000000000003';
+await db.query(`insert into invite_codes (code) values ('CHARLIE')`);
+await signup(U3, 'CHARLIE', 'charlie');
+await as(U3, `select submit_goals($1, $2)`, [JSON.stringify(goals), JSON.stringify({ ultra_punishment: 'Charlie ultra', ultra_wish: 'Charlie wish' })]);
+await as(ADMIN, `select approve_goals($1, '[]')`, [U3]);
+const today = (await one(`select local_today($1) d`, [U3])).d;
+const START = (await one(`select week_start($1::date) - 49 d`, [today])).d.toISOString().slice(0, 10);
+await assert.rejects(as(U3, `select admin_set_program_start($1)`, [START]), /ADMIN_ONLY/);
+await assert.rejects(as(ADMIN, `select admin_set_program_start(($1::date + 1))`, [START]), /MUST_BE_MONDAY/);
+await as(ADMIN, `select admin_set_program_start($1)`, [START]);
+await as(null, `update profiles set activated_at = $1::date - 14 where id = $2`, [START, U3]);
+const addD = (d, n) => new Date(Date.parse(d + 'T12:00:00Z') + n * 864e5).toISOString().slice(0, 10);
+const g3 = Object.fromEntries((await db.query(`select category, id from goals where user_id=$1`, [U3])).rows.map((r) => [r.category, r.id]));
+const logWeek = async (week, plan) => {
+  const ws = addD(START, 7 * (week - 1));
+  for (const [cat, days, v] of plan) for (let i = 0; i < days; i++) await put(U3, g3[cat], addD(ws, i), v);
+};
+// Program weeks 1–2: all green, except refraining 5/7 (gray) in week 2
+const green = [['gym', 4, 1], ['refraining', 7, 1], ['custom_1', 7, 30], ['custom_2', 5, 1], ['custom_3', 7, 1]];
+await logWeek(1, green);
+await logWeek(2, green.map((r) => (r[0] === 'refraining' ? ['refraining', 5, 1] : r)));
+await as(null, `select finalize_week($1::date)`, [START]);
+await as(null, `select finalize_week($1::date + 7)`, [START]);   // closing week 2 closes month 1
+const m1 = await one(`select * from monthly_results where user_id=$1 and month_number=1`, [U3]);
+assert.equal(m1.goals.gym.greens, 4, 'prep credits 2 green weeks');
+assert.equal(Number(m1.goals.gym.total), 16, 'prep counts 100% of target toward the month');
+assert.equal(m1.goals.refraining.gold, true, '3 green + 1 gray still earns Gold');
+assert.equal(m1.ultra_tier, 'green', 'a gray week rules out Ultra Gold → Ultra Green');
+assert.equal((await one(`select count(*)::int n from rewards where user_id=$1 and month_number=1 and kind='gold_month'`, [U3])).n, 5);
+assert.equal((await one(`select description from rewards where user_id=$1 and category='gym'`, [U3])).description, 'gym: spa day');
+assert.equal((await one(`select count(*)::int n from rewards where user_id=$1 and kind='ultra_wish'`, [U3])).n, 0);
+// Month 2 (weeks 3–6): nothing logged → red weeks with the goals' own punishments + Ultra Red
+for (let w = 3; w <= 6; w++) await as(null, `select finalize_week($1::date + $2::int)`, [START, 7 * (w - 1)]);
+const m2 = await one(`select * from monthly_results where user_id=$1 and month_number=2`, [U3]);
+assert.equal(m2.ultra_tier, 'red');
+const ultra = await one(`select * from punishments where user_id=$1 and kind='ultra'`, [U3]);
+assert.equal(ultra.punishment_description, 'Charlie ultra');
+assert.equal(ultra.category, null);
+assert.equal((await one(`select count(*)::int n from punishments where user_id=$1 and kind='red_week'`, [U3])).n, 20, '5 goals × 4 red weeks');
+assert.equal((await one(`select finalize_month(2) n`)).n, 0, 'months close once');
+// Month 3 is live: "Week 2 of 4", every goal still on track (no closed weeks yet)
+const ms = (await as(U3, `select month_status() s`)).rows[0].s;
+assert.equal(ms.status, 'active');
+assert.equal(ms.program_week, 8);
+assert.equal(ms.month, 3);
+assert.equal(ms.week_of_month, 2);
+assert.equal(ms.goals.length, 5);
+await assert.rejects(as(U1, `select month_status($1)`, [U3]), /NOT_ALLOWED/);
+await assert.rejects(as(ADMIN, `select admin_finalize_month(3)`), /MONTH_NOT_OVER/);
+// Read-only before the start and after week 10
+await as(ADMIN, `select admin_set_program_start(week_start($1::date) + 7)`, [today]);
+await assert.rejects(as(U3, `select submit_checkin('[]', null, null)`), /PROGRAM_NOT_STARTED/);
+await as(ADMIN, `select admin_set_program_start($1::date - 77)`, [(await one(`select week_start($1::date) d`, [today])).d]);
+await assert.rejects(as(U3, `select submit_checkin('[]', null, null)`), /PROGRAM_ENDED/);
+await as(ADMIN, `select admin_set_program_start($1)`, [START]);
+// Rewards are self-granted
+const rw = await one(`select id from rewards where user_id=$1 limit 1`, [U3]);
+await as(U1, `select claim_reward($1)`, [rw.id]);
+assert.equal((await one(`select claimed_at from rewards where id=$1`, [rw.id])).claimed_at, null, "can't claim someone else's");
+await as(U3, `select claim_reward($1)`, [rw.id]);
+assert.ok((await one(`select claimed_at from rewards where id=$1`, [rw.id])).claimed_at);
+console.log('✓ 12-week program: prep credit, Gold Months, Ultra tiers, rewards, read-only outside the program');
 
 console.log('\nAll SQL tests passed.');

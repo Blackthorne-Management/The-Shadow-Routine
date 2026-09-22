@@ -42,12 +42,12 @@ export default function Library() {
   return (
     <>
       <p className="hint">
-        When someone ends a week in the Red for a category, they get a random active punishment matching that goal's
-        area (or a "Fully custom" one as fallback). Entries marked [Placeholder] are stand-ins until you replace them.
+        Each participant's own red-week punishments (written at signup) are used first. These are only a
+        fallback for a goal with none set, picked at random by the goal's area. [Placeholder] entries are stand-ins.
       </p>
 
       <section className="card stack">
-        <h2>Add punishment</h2>
+        <h2>Add fallback punishment</h2>
         <div className="row gap">
           <select value={draft.theme} onChange={(e) => setDraft({ ...draft, theme: e.target.value as Theme })}>
             {THEMES.map((t) => <option key={t} value={t}>{THEME_NAMES[t]}</option>)}

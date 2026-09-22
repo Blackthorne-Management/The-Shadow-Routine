@@ -49,11 +49,13 @@ export default function Settings() {
                 <div className="grow">
                   <strong>{g.label}</strong>
                   <p className="small muted">{describeTarget(g)} · {g.category_point_max} pts</p>
+                  {g.red_week_punishment && <p className="small muted">Red week: {g.red_week_punishment}</p>}
+                  {g.gold_reward && <p className="small muted">Gold Month: {g.gold_reward}{g.three_gold_reward ? ` · 3 Gold: ${g.three_gold_reward}` : ''}</p>}
                 </div>
               </li>
             ))}
           </ul>
-          <p className="hint">Goals are locked once approved. Talk to your mentor to change one.</p>
+          <p className="hint">Goals and consequences are locked once approved. Talk to your mentor to change one.</p>
         </section>
       )}
 

@@ -64,7 +64,7 @@ function ProofCard({ p, name, onDone }: { p: Punishment; name: string; onDone: (
       <div className="row between">
         <div>
           <h2>{name}</h2>
-          <p className="small muted">{CATEGORY_NAMES[p.category]} · week of {formatWeek(p.week_start_date)}</p>
+          <p className="small muted">{p.kind === 'ultra' ? 'Ultra Punishment (Ultra Red Month)' : `Red week · ${CATEGORY_NAMES[p.category!]}`} · week of {formatWeek(p.week_start_date)}</p>
         </div>
         <span className={`pill ${p.proof_status === 'accepted' ? 'green' : p.proof_status === 'rejected' ? 'red' : 'amber'}`}>
           {p.proof_status}

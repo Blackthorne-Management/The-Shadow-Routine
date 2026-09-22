@@ -52,8 +52,8 @@ export default function PunishmentPage() {
     <main className="screen with-tabs">
       <Link to="/" className="back-link"><Icon name="back" size={16} /> Today</Link>
       <section className="card">
-        <span className="pill red" style={{ alignSelf: 'flex-start' }}>Red band</span>
-        <p className="eyebrow">{goal?.label ?? p.category} · {formatWeek(p.week_start_date)}</p>
+        <span className="pill red" style={{ alignSelf: 'flex-start' }}>{p.kind === 'ultra' ? 'Ultra Red Month' : 'Red week'}</span>
+        <p className="eyebrow">{p.kind === 'ultra' ? 'Ultra Punishment' : goal?.label ?? p.category} · {formatWeek(p.week_start_date)}</p>
         <h1>{p.punishment_description}</h1>
       </section>
 
@@ -62,7 +62,7 @@ export default function PunishmentPage() {
         {p.proof_status === 'rejected' && <strong>Proof rejected{p.review_note ? `: ${p.review_note}` : ''}</strong>}
         {p.proof_status === 'pending' && (p.proof_submitted_at
           ? <strong>Submitted — waiting on your mentor's review.</strong>
-          : <strong>{mentor ? 'Complete it, then confirm you discussed it with your mentor.' : `Complete it and upload a ${p.proof_type} as proof.`}</strong>)}
+          : <strong>{mentor ? 'Complete it, then confirm you discussed it with your mentor.' : 'Complete it during the following week and upload a photo or clip of yourself doing it.'}</strong>)}
       </div>
 
       {p.proof_file_url && <ProofPreview path={p.proof_file_url} />}

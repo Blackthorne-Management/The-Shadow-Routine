@@ -4,11 +4,12 @@ import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 import { describeTarget } from '../lib/goals';
 import { addDays, formatDay, formatWeek, timeLeftToday } from '../lib/dates';
-import type { Band, Infraction, Punishment, TodayContext, WeeklyScore } from '../lib/types';
+import type { Band, Infraction, MonthStatus, MonthlyResult, Punishment, Reward, TodayContext, WeeklyScore } from '../lib/types';
+import MonthPanel from '../components/MonthPanel';
 import { ProgressBar, Splash, TickMeter, TopBar } from '../components/ui';
 import { Icon, ThemeIcon } from '../components/Icon';
 
-const PACE_TEXT: Record<Band, string> = { green: 'On track', gray: 'Slightly behind', red: 'Behind pace' };
+const PACE_TEXT: Record<Band, string> = { green: 'On track', gray: 'Behind: catch up', red: 'Behind pace' };
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export default function Home() {
@@ -19,20 +20,29 @@ export default function Home() {
   const [daily, setDaily] = useState<Record<string, number>>({});
   const [punishments, setPunishments] = useState<Punishment[]>([]);
   const [notices, setNotices] = useState<Infraction[]>([]);
+  const [month, setMonth] = useState<MonthStatus | null>(null);
+  const [rewards, setRewards] = useState<Reward[]>([]);
+  const [results, setResults] = useState<MonthlyResult[]>([]);
 
   const load = useCallback(async () => {
     if (!profile) return;
     const { data: ctx } = await supabase.rpc('today_context');
     const t = ctx as TodayContext;
     setToday(t);
-    const [s, n, e, p, i] = await Promise.all([
+    const [s, n, e, p, i, m, r, mr] = await Promise.all([
       supabase.from('weekly_scores').select('*').eq('user_id', profile.id).eq('week_start_date', t.week_start).maybeSingle(),
       supabase.from('weekly_scores').select('id', { count: 'exact', head: true }).eq('week_start_date', t.week_start),
       supabase.from('daily_entries').select('entry_date,value_reported').eq('user_id', profile.id)
         .gte('entry_date', t.week_start).lte('entry_date', addDays(t.week_start, 6)),
       supabase.from('punishments').select('*').eq('user_id', profile.id).neq('proof_status', 'accepted').order('created_at', { ascending: false }),
       supabase.from('infractions').select('*').eq('user_id', profile.id).is('acknowledged_at', null),
+      supabase.rpc('month_status'),
+      supabase.from('rewards').select('*').eq('user_id', profile.id).order('created_at', { ascending: false }),
+      supabase.from('monthly_results').select('*').eq('user_id', profile.id).order('month_number', { ascending: false }),
     ]);
+    setMonth((m.data as MonthStatus) ?? null);
+    setRewards((r.data as Reward[]) ?? []);
+    setResults((mr.data as MonthlyResult[]) ?? []);
     setScore((s.data as WeeklyScore) ?? null);
     setCohortSize(n.count ?? 0);
     // Goals with progress, per day of the week
@@ -56,6 +66,7 @@ export default function Home() {
   if (!today || !profile) return <Splash />;
 
   const logged = today.entries.length > 0;
+  const open = today.program.status === 'active' || today.program.status === 'unset';
   const first = profile.display_name.split(' ')[0];
   const total = Number(score?.total_points ?? 0);
 
@@ -99,6 +110,7 @@ export default function Home() {
         </div>
       ))}
 
+      {open ? (
       <section className="today-block">
         <p className="eyebrow" style={{ color: 'var(--ink)', fontSize: 14 }}>Tonight's check-in</p>
         <div className="today-row">
@@ -109,6 +121,18 @@ export default function Home() {
           <Link to="/checkin" className={`btn square ${logged ? '' : 'primary'}`}>{logged ? 'Edit' : 'Start'}</Link>
         </div>
       </section>
+      ) : (
+        <section className="today-block">
+          <p className="eyebrow" style={{ color: 'var(--ink)', fontSize: 14 }}>
+            {today.program.status === 'ended' ? 'Program complete' : 'Prep weeks'}
+          </p>
+          <span className="today-title">
+            {today.program.status === 'ended'
+              ? 'The 12 weeks are done. Your history stays here.'
+              : `Check-ins open ${formatDay(today.program.start_date!)}`}
+          </span>
+        </section>
+      )}
 
       <div className="pair">
         <section className="card">
@@ -152,6 +176,8 @@ export default function Home() {
         </ul>
       </section>
 
+      <MonthPanel month={month} rewards={rewards} results={results} onChange={load} />
+
       <section className="card">
         <div>
           <p className="stat-label">Your week</p>
@@ -181,6 +207,7 @@ export default function Home() {
                 <Link to={`/punishment/${p.id}`} className="list-row link-row">
                   <span className={`status-dot ${p.proof_status}`} />
                   <div className="grow">
+                    <p className="small muted">{p.kind === 'ultra' ? 'Ultra Punishment' : `Red week · ${goals.find((g) => g.category === p.category)?.label ?? ''}`}</p>
                     <strong style={{ fontWeight: 500 }}>{p.punishment_description}</strong>
                     <p className="small muted">
                       {p.proof_status === 'rejected' ? 'Proof rejected: resubmit'
@@ -197,8 +224,8 @@ export default function Home() {
       )}
 
       <p className="legend small muted">
-        <span className="dot band-green" /> on track <span className="dot band-gray" /> slightly behind <span className="dot band-red" /> behind.
-        Punishments only count the final week: under 60% of a target when Sunday ends.
+        <span className="dot band-green" /> on track <span className="dot band-gray" /> behind, catch up <span className="dot band-red" /> red week (final).
+        Mid-week you're never red. A week that closes under 60% of a target triggers that goal's punishment.
       </p>
     </main>
   );

@@ -28,6 +28,16 @@ export function friendlyError(err: unknown): string {
     FILE_REQUIRED: 'This punishment needs a photo or video.',
     ALREADY_ACCEPTED: 'That proof was already accepted.',
     NOT_ALLOWED: 'Not allowed.',
+    NEED_CONSEQUENCES: 'Every goal needs its red-week punishment and both rewards, plus your Ultra Punishment and one wish.',
+    BAD_WORKOUT_TARGET: 'Workouts per week must be between 1 and 21.',
+    WORKOUT_TOO_SHORT: 'A workout needs to be 30 minutes or more.',
+    WORKOUT_NEEDS_PHOTO: 'Each workout needs a photo or clip — or a note asking your mentor for an exception.',
+    TOO_MANY_WORKOUTS: 'That is more workouts than one day allows (max 6).',
+    PROGRAM_NOT_STARTED: "The program hasn't started yet — check-ins open on program week 1.",
+    PROGRAM_ENDED: 'The program has ended. Your history is read-only now.',
+    MUST_BE_MONDAY: 'Program week 1 has to start on a Monday.',
+    MONTH_NOT_OVER: "That month isn't over yet.",
+    PROGRAM_NOT_SET: 'Set the program start date first.',
     'Invalid login credentials': 'Wrong email or password.',
   };
   for (const [code, text] of Object.entries(map)) if (msg.includes(code)) return text;

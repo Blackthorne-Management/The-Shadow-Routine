@@ -22,8 +22,17 @@ Rules that matter for fairness run **in Postgres**, not the browser:
 - **Invite codes** are redeemed atomically in a trigger on `auth.users`. A bad or used code blocks account creation.
 - **Check-ins** go through `submit_checkin()`, which always writes to the participant's *local today*. Re-submitting the same day overwrites it (same-day edits), and past days can't be written.
 - **Scoring** (`compute_week()`) re-runs on every check-in, so the leaderboard is live all week. The formula: `min(actual/target, 1) × category max` per category, green ≥80% / gray 60–79% / red <60%, bonus 7 each capped at 49. Ties go to whoever has more green categories.
+- **Mid-week colors are only green or gray** (behind = "catch up"); red appears only when a week closes.
 - **Two kinds of band color.** `band_per_category` is strict (% of the full weekly target) and is the only thing punishments use. `pace_band_per_category` asks "on track given how much of the week has passed?" and drives the leaderboard dots and Home progress colors, so nobody is red 8 hours into Monday. Yes/no goals owe whole days: a 4x/week gym goal owes nothing after day one. (`…04_pace_bands.sql`)
 - **Finalization** (`finalize_week()`) runs Mondays at 12:00 UTC via pg_cron. It locks the week and creates a punishment for every red band. Anyone activated partway through the week is exempt that week.
+- **The 12-week program** (`…08_program_workouts_months.sql`). The admin sets the Monday of program week 1 in **Admin → Program**.
+  - The 2 prep weeks before it are credited as green at 100% of target.
+  - **Months:** month 1 = prep + weeks 1–2, month 2 = weeks 3–6, month 3 = weeks 7–10. Each closes automatically when its last week is finalized.
+  - **Gold Month (per goal):** the monthly total (default 80% of 4 weeks), 3+ green weeks, at most 1 gray and no red. It earns that goal's reward; Gold in all 3 months earns the big reward.
+  - **Ultra tier (per month):** Gold if every goal is at 80%+ with no gray/red weeks; Green if every goal is at 75%+, at most 1 gray per goal and no red; below that, a plain average of 60%+ is Gray and under 60% is Red, which triggers the participant's Ultra Punishment.
+  - Check-ins are blocked before week 1 and after week 10 (read-only).
+- **Workouts:** each 30+ minute session is its own row and needs a photo/clip. With no photo, the participant asks the mentor, and it counts only if accepted. The mentor can reject any photo in **Admin → Workouts**, which re-scores the week.
+- **Consequences:** each goal's red-week punishment, Gold reward and 3-Gold reward, plus the Ultra Punishment and "one wish", are written at signup and approved or edited by the mentor. Rewards are self-granted, and "Mark claimed" is optional.
 - **Infractions:** a rejected proof logs #1 (a warning, and the participant sees a "talk to your mentor" notice). #2 surfaces a manual **Remove participant** button for the admin.
 
 ## Setup
@@ -78,6 +87,6 @@ Check the job with `select * from cron.job_run_details order by start_time desc 
 
 ## Open decisions (placeholders in place)
 
-- **Punishment library:** every entry is marked `[Placeholder]`. Replace them in **Admin → Punishments**.
+- **Fallback punishment library:** only used when a goal has no red-week punishment of its own. Every entry is marked `[Placeholder]`; edit them in **Admin → Fallbacks**.
 - **Check-in wording:** each goal stores its own question. Defaults are generated from the goal (e.g. "Did you avoid alcohol today?"), and participants and the admin can rewrite any of them.
 - **Branding:** based on the BRIK reference. Cream screen, deep-teal panels joined by small bridges, a lavender accent, pill buttons and Inter Tight. All tokens are at the top of `src/styles.css`, and icons are line SVGs in `src/components/Icon.tsx`. The app icon is `public/icons/icon.svg`; run `npm run icons` after changing it.
