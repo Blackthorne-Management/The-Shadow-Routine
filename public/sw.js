@@ -1,8 +1,10 @@
 // The Shadow Routine service worker: offline app shell + Web Push.
-// Bump VERSION to force clients onto a fresh cache after a deploy.
-const VERSION = 'v2';
+// VERSION and PRECACHE are filled in at build time (see vite.config.ts), so
+// each deploy gets a fresh cache holding the full app shell, including the font.
+const VERSION = 'dev';
+const PRECACHE = [];
 const SHELL_CACHE = `shell-${VERSION}`;
-const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/apple-touch-icon.png'];
+const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/apple-touch-icon.png', ...PRECACHE];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(SHELL_CACHE).then((c) => c.addAll(SHELL)));
@@ -32,15 +34,17 @@ self.addEventListener('fetch', (event) => {
           caches.open(SHELL_CACHE).then((c) => c.put('/', copy));
           return res;
         })
-        .catch(() => caches.match('/')),
+        .catch(() => caches.match('/', { ignoreVary: true })),
     );
     return;
   }
 
-  // Hashed build assets never change: cache first.
+  // Hashed build assets never change: cache first. ignoreVary because module
+  // scripts/CSS are requested with an Origin header (crossorigin) while the
+  // precache stored them without one; a Vary: Origin response would never match.
   if (url.pathname.startsWith('/assets/') || url.pathname.startsWith('/icons/')) {
     event.respondWith(
-      caches.match(req).then((hit) => hit || fetch(req).then((res) => {
+      caches.match(req, { ignoreVary: true }).then((hit) => hit || fetch(req).then((res) => {
         const copy = res.clone();
         caches.open(SHELL_CACHE).then((c) => c.put(req, copy));
         return res;
