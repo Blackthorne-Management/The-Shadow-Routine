@@ -12,6 +12,7 @@ weighted weekly scoring, a live leaderboard, and a punishment/proof system with 
 | Schema, row-level security, storage bucket | `supabase/migrations/…01_schema.sql` |
 | Signup/invite redemption, check-ins, scoring engine, punishments | `supabase/migrations/…02_logic.sql` |
 | Placeholder punishment library, bonus presets, weekly/daily cron jobs | `supabase/migrations/…03_seed_and_cron.sql` |
+| Security hardening, pace-from-activation fix, push config from Vault | `supabase/migrations/…05` – `…07` |
 | Push reminder sender (runs every 5 min) | `supabase/functions/send-reminders/` + `supabase/sql/schedule_reminders.sql` |
 | Service worker (offline shell + push) and manifest | `public/sw.js`, `public/manifest.webmanifest` |
 | App | `src/` (participant pages in `pages/`, admin in `pages/admin/`) |
@@ -42,18 +43,13 @@ Rules that matter for fairness run **in Postgres**, not the browser:
 
 ### 2. Push notifications
 
-```bash
-npm run vapid
-```
-
-That prints a public/private key pair. Then:
-
-```bash
-npx supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... VAPID_SUBJECT=mailto:you@example.com CRON_SECRET=some-long-random-string
-npx supabase functions deploy send-reminders --no-verify-jwt
-```
-
-Finally, edit the two placeholders in `supabase/sql/schedule_reminders.sql` (project URL + the same `CRON_SECRET`) and run it once in the SQL editor.
+1. Deploy the function with JWT verification off. It authenticates the cron caller with a shared secret instead:
+   ```bash
+   npx supabase functions deploy send-reminders --no-verify-jwt
+   ```
+2. Generate a VAPID key pair with `npm run vapid`, and make up a long random cron secret.
+3. Fill in the placeholders in `supabase/sql/schedule_reminders.sql` and run it once in the SQL editor. It stores the keys and secret encrypted in **Vault** and schedules the 5-minute job. The function reads the same Vault entries through `push_config()`, which only the service role can call, so no secrets end up in the repo or the dashboard. (Edge Function secrets named `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` and `CRON_SECRET` override Vault if you set them.)
+4. Put the **public** key in `VITE_VAPID_PUBLIC_KEY`.
 
 ### 3. Netlify
 

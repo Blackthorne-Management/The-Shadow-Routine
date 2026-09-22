@@ -11,8 +11,10 @@ export default function Leaderboard() {
   const lastWeek = addDays(thisWeek, -7);
   const [week, setWeek] = useState(thisWeek);
 
-  // Make sure the current week has rows (and fresh pace colors) on open
-  useEffect(() => { supabase.rpc('refresh_current_week'); }, []);
+  // Make sure the current week has rows (and fresh pace colors) on open.
+  // Supabase builders are lazy: without .then() the request is never sent.
+  // Any rows it writes reach the list through its realtime subscription.
+  useEffect(() => { supabase.rpc('refresh_current_week').then(); }, []);
 
   return (
     <main className="screen with-tabs">

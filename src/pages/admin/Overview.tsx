@@ -33,7 +33,7 @@ export default function Overview() {
   }, []);
 
   useEffect(() => {
-    supabase.rpc('refresh_current_week');
+    supabase.rpc('refresh_current_week').then(); // lazy builder: .then() sends it
     loadFeed();
     const ch = supabase.channel('admin-feed')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_entries' }, () => loadFeed())

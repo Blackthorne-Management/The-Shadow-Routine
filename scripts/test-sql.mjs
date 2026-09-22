@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 const db = new PGlite();
 
 await db.exec(`
-  create role anon; create role authenticated;
+  create role anon; create role authenticated; create role service_role;
   create schema auth;
   create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb);
   create function auth.uid() returns uuid language sql stable as
@@ -84,6 +84,13 @@ assert.equal((await one(`select target_value::int t from goals where id=$1`, [gy
 assert.equal((await one(`select status from profiles where id=$1`, [U1])).status, 'active');
 await assert.rejects(as(U1, `select submit_goals($1)`, [JSON.stringify(goals)]), /GOALS_LOCKED/);
 console.log('✓ goal proposal + admin approval');
+
+// Just approved, nothing logged yet: pace is neutral (not red), because days
+// before activation don't count as owed.
+await as(U2, `select refresh_current_week()`);
+const fresh = await one(`select pace_band_per_category p from weekly_scores where user_id=$1`, [U2]);
+assert.ok(Object.values(fresh.p).every((b) => b === null), `new participant pace should be neutral: ${JSON.stringify(fresh.p)}`);
+console.log('✓ pace starts at activation (new participants start neutral)');
 
 // --- today's check-in (live scoring) ----------------------------------------
 const ctx = (await as(U1, `select today_context() c`)).rows[0].c;

@@ -3,9 +3,9 @@
 // Sends a Web Push to each participant whose local reminder time has arrived,
 // at most once per local day, and skips anyone who's already checked in.
 //
-// Secrets (supabase secrets set ...):
-//   VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT (mailto:you@example.com), CRON_SECRET
-// SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided automatically.
+// Config comes from Supabase Vault via public.push_config() (service role only):
+//   vapid_public_key, vapid_private_key, vapid_subject, cron_secret
+// Edge Function secrets with the same names in UPPER_CASE override Vault if set.
 import webpush from 'npm:web-push@3.6.7';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -13,13 +13,27 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 // Wider than the 5-minute cron interval so one late run doesn't skip anyone.
 const WINDOW_MINUTES = 15;
 
-webpush.setVapidDetails(
-  Deno.env.get('VAPID_SUBJECT') ?? 'mailto:admin@example.com',
-  Deno.env.get('VAPID_PUBLIC_KEY')!,
-  Deno.env.get('VAPID_PRIVATE_KEY')!,
-);
+// Projects expose the service key as either the legacy env var or the newer JSON map
+const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  ?? JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') ?? '{}').default;
+const db = createClient(Deno.env.get('SUPABASE_URL')!, serviceKey, { auth: { persistSession: false } });
 
-const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+let config: Record<string, string> | null = null;
+async function getConfig() {
+  if (config) return config;
+  const { data, error } = await db.rpc('push_config');
+  if (error) throw new Error(`push_config: ${error.message}`);
+  const vault = (data ?? {}) as Record<string, string>;
+  const pick = (name: string) => Deno.env.get(name.toUpperCase()) ?? vault[name];
+  config = {
+    publicKey: pick('vapid_public_key'),
+    privateKey: pick('vapid_private_key'),
+    subject: pick('vapid_subject') ?? 'mailto:admin@example.com',
+    cronSecret: pick('cron_secret'),
+  };
+  webpush.setVapidDetails(config.subject, config.publicKey, config.privateKey);
+  return config;
+}
 
 /** Local date (YYYY-MM-DD) and minutes-since-midnight in a timezone. */
 function localNow(tz: string, now: Date) {
@@ -35,7 +49,9 @@ function localNow(tz: string, now: Date) {
 }
 
 Deno.serve(async (req) => {
-  if (req.headers.get('x-cron-secret') !== Deno.env.get('CRON_SECRET')) {
+  let cfg;
+  try { cfg = await getConfig(); } catch (e) { return new Response((e as Error).message, { status: 500 }); }
+  if (!cfg.cronSecret || req.headers.get('x-cron-secret') !== cfg.cronSecret) {
     return new Response('unauthorized', { status: 401 });
   }
 
@@ -49,7 +65,7 @@ Deno.serve(async (req) => {
   if (error) return new Response(error.message, { status: 500 });
 
   const now = new Date();
-  const results = { due: 0, sent: 0, skipped_logged: 0, expired: 0, failed: 0 };
+  const results = { checked: rows?.length ?? 0, due: 0, sent: 0, skipped_logged: 0, expired: 0, failed: 0 };
 
   for (const r of rows ?? []) {
     let local;
