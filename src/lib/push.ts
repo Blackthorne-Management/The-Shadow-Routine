@@ -18,7 +18,21 @@ export const needsInstallForPush = () => isIOS() && !isStandalone();
 export async function registerServiceWorker() {
   if (!('serviceWorker' in navigator) || import.meta.env.DEV) return;
   try {
-    await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    // An installed app can sit open in the background for days. When it comes
+    // back to the front, check for a new deploy; if one took over while it was
+    // away, reload so nobody keeps running an old version.
+    let hadController = !!navigator.serviceWorker.controller;
+    let updated = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (hadController) updated = true;
+      hadController = true;
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') return;
+      if (updated) { location.reload(); return; }
+      reg.update().catch(() => {});
+    });
   } catch (e) {
     console.warn('Service worker registration failed', e);
   }

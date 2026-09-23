@@ -82,6 +82,13 @@ export default function CheckIn() {
   const answerAndAdvance = (id: string, a: Answer) => { setAnswer(id, a); setTimeout(next, 160); };
 
   async function submit() {
+    // "Yes" on the challenge needs a photo: send them back to add one
+    const ch = ctx!.challenge;
+    if (ch && bonus && (!ch.photo_path || ch.review_status === 'rejected')) {
+      setError('');
+      setI(goals.length);
+      return;
+    }
     setBusy(true); setError('');
     const readRank = async () => (await supabase.from('profiles').select('cumulative_cycle_points,rank_level').eq('id', profile!.id).single()).data;
     const pre = await readRank();
@@ -169,7 +176,12 @@ export default function CheckIn() {
                   <button className="review-row" onClick={() => setI(goals.length)}>
                     <span className="goal-icon sm"><Icon name="bolt" /></span>
                     <span className="grow">{ctx.challenge.description}</span>
-                    <strong className={bonus == null ? 'missing' : ''}>{bonus == null ? '—' : bonus ? 'Done · photo' : 'Skipped'}</strong>
+                    {(() => {
+                      const needsPhoto = bonus && (!ctx.challenge.photo_path || ctx.challenge.review_status === 'rejected');
+                      return <strong className={bonus == null || needsPhoto ? 'missing' : ''}>
+                        {bonus == null ? '—' : needsPhoto ? 'Add a photo' : bonus ? 'Done · photo' : 'Skipped'}
+                      </strong>;
+                    })()}
                   </button>
                 </li>
               )}
@@ -438,7 +450,14 @@ function BonusStep({ challenge, date, userId, value, onChallenge, onPick, onNext
 }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const proofRef = useRef<HTMLDivElement>(null);
   const rejected = challenge.review_status === 'rejected';
+  // After "Yes", bring the photo box into view (it's below the fold on phones)
+  useEffect(() => {
+    if (value === true && !(challenge.photo_path && !rejected)) {
+      setTimeout(() => proofRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60);
+    }
+  }, [value, challenge.photo_path, rejected]);
   const hasPhoto = !!challenge.photo_path && !rejected;
 
   async function pickMedia(file: File | undefined) {
@@ -472,7 +491,7 @@ function BonusStep({ challenge, date, userId, value, onChallenge, onPick, onNext
       <YesNo value={value} onPick={(v) => onPick(v, !v || hasPhoto)} />
 
       {value === true && (
-        <>
+        <div ref={proofRef} className="stack">
           {rejected && (
             <div className="notice red">
               <strong>Your mentor rejected this photo</strong>
@@ -498,8 +517,9 @@ function BonusStep({ challenge, date, userId, value, onChallenge, onPick, onNext
             </label>
           )}
           <ErrorText>{error}</ErrorText>
+          {!hasPhoto && <p className="hint center-text">It only counts with a photo or clip.</p>}
           <button type="button" className="btn primary block" disabled={!hasPhoto || uploading} onClick={onNext}>Next</button>
-        </>
+        </div>
       )}
     </>
   );
