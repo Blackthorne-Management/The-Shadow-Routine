@@ -13,6 +13,7 @@ import People from './People';
 import Workouts from './Workouts';
 import Program from './Program';
 import AdminDms, { AdminDmThread } from './AdminDms';
+import Cohorts from './Cohorts';
 
 interface Tab { to: string; label: string; pending?: keyof PendingCounts; adminOnly?: boolean }
 const TABS: Tab[] = [
@@ -21,6 +22,7 @@ const TABS: Tab[] = [
   { to: 'workouts', label: 'Workouts', pending: 'workouts' },
   { to: 'proofs', label: 'Proof', pending: 'proofs' },
   { to: 'people', label: 'People' },
+  { to: 'cohorts', label: 'Cohorts', adminOnly: true },
   { to: 'invites', label: 'Invites' },
   { to: 'bonus', label: 'Bonus' },
   { to: 'program', label: 'Program', adminOnly: true },
@@ -55,6 +57,7 @@ export default function Admin() {
         <Route path="invites" element={<Invites />} />
         <Route path="bonus" element={<Bonus />} />
         <Route path="library" element={<Library />} />
+        {admin && <Route path="cohorts" element={<Cohorts />} />}
         {admin && <Route path="program" element={<Program />} />}
         {admin && <Route path="dms" element={<AdminDms />} />}
         {admin && <Route path="dms/:a/:b" element={<AdminDmThread />} />}

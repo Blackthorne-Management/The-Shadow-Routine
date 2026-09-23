@@ -455,7 +455,8 @@ await db.exec(`grant usage on schema public to authenticated;
   grant select, insert, delete on public.messages to authenticated;
   grant select on public.dm_reads to authenticated;
   grant select, insert, update, delete on public.invite_codes to authenticated;
-  grant execute on function is_admin(), is_super_admin(), my_chat_cohort(), can_dm(uuid) to authenticated;`);
+  grant execute on function is_admin(), is_super_admin(), my_chat_cohort(), can_dm(uuid), mentors_cohort(uuid), staff_in_cohort(uuid), staff_can_see(uuid), default_cohort() to authenticated;
+  grant select on public.goals to authenticated;`);
 const asUser = async (uid, sql, params) => {
   await db.query(`select set_config('request.jwt.claim.sub', $1, false)`, [uid]);
   await db.exec('set role authenticated');
@@ -468,7 +469,7 @@ await assert.rejects(as(M2, `select admin_set_program_start(null)`), /ADMIN_ONLY
 await assert.rejects(as(M2, `select remove_participant($1)`, [U3]), /ADMIN_ONLY/);
 await assert.rejects(as(M2, `select admin_finalize_week('2026-08-24'::date)`), /ADMIN_ONLY/);
 await assert.rejects(asUser(M2, `insert into invite_codes (code, role) values ('MENTORX', 'mentor')`), /row-level security/);
-await asUser(M2, `insert into invite_codes (code, role) values ('PARTX', 'participant')`);
+await asUser(M2, `insert into invite_codes (code, role, cohort_id) values ('PARTX', 'participant', default_cohort())`);
 await asUser(ADMIN, `insert into invite_codes (code, role) values ('MENTORY', 'mentor')`);
 // DMs: the pair and Admins read them; a Mentor can't read other people's
 await asUser(U1, `insert into messages (channel, user_id, recipient_id, message_text) values ('dm', $1, $2, 'hey charlie')`, [U1, U3]);
@@ -546,8 +547,56 @@ await asUser(ADMIN, `insert into invite_codes (code, role) values ('ADMY', 'admi
 const A2 = '00000000-0000-0000-0000-0000000000a2';
 await signup(A2, 'ADMY', 'admin2');
 const a2 = await one(`select role, status, is_super_admin, is_mentor from profiles where id=$1`, [A2]);
-assert.deepEqual([a2.role, a2.status, a2.is_super_admin, a2.is_mentor], ['admin', 'active', true, true], 'an Admin invite creates an active Admin');
+assert.deepEqual([a2.role, a2.status, a2.is_super_admin, a2.is_mentor], ['admin', 'active', true, false], 'an Admin invite creates an active Admin (mentoring no cohort yet)');
 assert.equal((await as(A2, `select is_super_admin() v`)).rows[0].v, true);
 console.log('✓ admin invites');
+
+// --- Mentors are linked to cohorts -------------------------------------------------
+const defaultCohort = (await one(`select default_cohort() c`)).c;
+assert.equal((await one(`select count(*)::int n from cohort_mentors where user_id=$1 and cohort_id=$2`, [M2, defaultCohort])).n, 1,
+  'a mentor invite links the mentor to its cohort');
+await assert.rejects(as(M2, `select create_cohort('Fudo')`), /ADMIN_ONLY/);
+const C2 = (await as(ADMIN, `select create_cohort('Fudo') id`)).rows[0].id;
+await assert.rejects(as(ADMIN, `select create_cohort('fudo')`), /NAME_TAKEN/);
+// A participant invited into the new cohort
+await assert.rejects(asUser(M2, `insert into invite_codes (code, role, cohort_id) values ('FUDO1', 'participant', $1)`, [C2]),
+  /row-level security/, "a Mentor can't invite into a cohort they don't mentor");
+await asUser(M2, `insert into invite_codes (code, role, cohort_id) values ('MARI1', 'participant', $1)`, [defaultCohort]);
+await asUser(ADMIN, `insert into invite_codes (code, role, cohort_id) values ('FUDO1', 'participant', $1)`, [C2]);
+const U9 = '00000000-0000-0000-0000-000000000009';
+await signup(U9, 'FUDO1', 'kenji');
+assert.equal((await one(`select cohort_id from profiles where id=$1`, [U9])).cohort_id, C2, 'invite puts them in its cohort');
+const adminAlerts = async (uid) => (await one(`select count(*)::int n from notifications where user_id=$1 and type='admin_goal_submissions'`, [uid])).n;
+let al = [await adminAlerts(ADMIN), await adminAlerts(M2)];
+await as(U9, `select submit_goals($1, $2)`, [JSON.stringify(goals), CONSEQ]);
+assert.deepEqual([await adminAlerts(ADMIN), await adminAlerts(M2)], [al[0] + 1, al[1]],
+  "no mentor for Fudo yet: Admins hear about it, Marishiten's mentor doesn't");
+// M2 can't see or approve someone in a cohort they don't mentor
+assert.equal((await asUser(M2, `select count(*)::int n from goals where user_id=$1`, [U9])).rows[0].n, 0);
+assert.equal((await asUser(ADMIN, `select count(*)::int n from goals where user_id=$1`, [U9])).rows[0].n, 5);
+await assert.rejects(as(M2, `select approve_goals($1, '[]')`, [U9]), /ADMIN_ONLY/);
+assert.equal((await as(M2, `select admin_pending_counts() c`)).rows[0].c.approvals, 0);
+assert.equal((await as(ADMIN, `select admin_pending_counts() c`)).rows[0].c.approvals, 1);
+assert.ok(!(await as(M2, `select id from admin_directory()`)).rows.some((r) => r.id === U9));
+// Link M2 to Fudo: now they can
+await assert.rejects(as(M2, `select set_cohort_mentor($1, $2, true)`, [C2, M2]), /ADMIN_ONLY/);
+await as(ADMIN, `select set_cohort_mentor($1, $2, true)`, [C2, M2]);
+assert.equal((await asUser(M2, `select count(*)::int n from goals where user_id=$1`, [U9])).rows[0].n, 5);
+await as(M2, `select approve_goals($1, '[]')`, [U9]);
+assert.equal((await one(`select status from profiles where id=$1`, [U9])).status, 'active');
+// Cohort chat: M2 sees Fudo chat now; unlinked, they don't
+await as(U9, `insert into messages (channel, cohort_id, user_id, message_text) values ('cohort', $1, $2, 'hello fudo')`, [C2, U9]);
+assert.equal((await asUser(M2, `select count(*)::int n from messages where cohort_id=$1`, [C2])).rows[0].n, 1);
+await as(ADMIN, `select set_cohort_mentor($1, $2, false)`, [C2, M2]);
+assert.equal((await asUser(M2, `select count(*)::int n from messages where cohort_id=$1`, [C2])).rows[0].n, 0);
+assert.equal((await asUser(U1, `select count(*)::int n from messages where cohort_id=$1`, [C2])).rows[0].n, 0, "other cohorts can't read it");
+// Moving people + is_mentor sync
+await as(ADMIN, `select move_to_cohort($1, $2)`, [U9, defaultCohort]);
+assert.equal((await one(`select cohort_id from profiles where id=$1`, [U9])).cohort_id, defaultCohort);
+await as(ADMIN, `select set_cohort_mentor($1, $2, false)`, [defaultCohort, M2]);
+assert.equal((await one(`select is_mentor from profiles where id=$1`, [M2])).is_mentor, false, 'is_mentor follows the links');
+await as(ADMIN, `select set_cohort_mentor($1, $2, true)`, [defaultCohort, M2]);
+assert.equal((await one(`select is_mentor from profiles where id=$1`, [M2])).is_mentor, true);
+console.log('✓ mentors linked to cohorts: visibility, approvals, alerts, chat, invites');
 
 console.log('\nAll SQL tests passed.');

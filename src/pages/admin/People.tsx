@@ -4,6 +4,7 @@ import { supabase, friendlyError } from '../../lib/supabase';
 import { addDays, formatWeek, localDate, weekStart } from '../../lib/dates';
 import type { UserStatus } from '../../lib/types';
 import { isSuperAdmin } from '../../lib/roles';
+import { useCohorts } from '../../lib/cohorts';
 import { Empty, ErrorText } from '../../components/ui';
 import { Icon } from '../../components/Icon';
 
@@ -20,17 +21,28 @@ export default function People() {
   const [rows, setRows] = useState<DirRow[] | null>(null);
   const [error, setError] = useState('');
   const [msg, setMsg] = useState('');
+  const { cohorts } = useCohorts();
+  const [cohortOf, setCohortOf] = useState<Map<string, string | null>>(new Map());
 
   const load = useCallback(async () => {
     const { data, error } = await supabase.rpc('admin_directory');
     if (error) setError(friendlyError(error));
     setRows(((data as DirRow[]) ?? []).filter((r) => r.role === 'participant'));
+    const { data: ps } = await supabase.from('profiles').select('id,cohort_id');
+    setCohortOf(new Map((ps ?? []).map((p) => [p.id, p.cohort_id])));
   }, []);
   useEffect(() => { load(); }, [load]);
 
   async function remove(r: DirRow) {
     if (!confirm(`Remove ${r.display_name} from the cohort? They'll lose access immediately.`)) return;
     const { error } = await supabase.rpc('remove_participant', { p_user: r.id });
+    if (error) setError(friendlyError(error)); else load();
+  }
+
+  async function move(r: DirRow, cohort: string) {
+    const name = cohorts?.find((c) => c.id === cohort)?.name;
+    if (!confirm(`Move ${r.display_name} to ${name}? Their cohort chat and mentors change.`)) return;
+    const { error } = await supabase.rpc('move_to_cohort', { p_user: r.id, p_cohort: cohort });
     if (error) setError(friendlyError(error)); else load();
   }
 
@@ -56,6 +68,12 @@ export default function People() {
                 <div>
                   <strong>{r.display_name}</strong> <span className="small muted">@{r.username}</span>
                   <p className="small muted">{r.email}</p>
+                  {cohorts && cohorts.length > 1 && (admin ? (
+                    <select className="small-input" value={cohortOf.get(r.id) ?? ''} aria-label={`${r.display_name}'s cohort`}
+                      onChange={(e) => move(r, e.target.value)}>
+                      {cohorts.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  ) : <p className="small muted">{cohorts.find((c) => c.id === cohortOf.get(r.id))?.name}</p>)}
                 </div>
                 <span className={`pill ${r.status === 'active' ? 'green' : r.status === 'removed' ? 'red' : 'amber'}`}>
                   {r.status.replace('_', ' ')}

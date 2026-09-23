@@ -4,6 +4,8 @@ import { THEME_NAMES, goldTarget, sortGoals } from '../../lib/goals';
 import { ThemeIcon } from '../../components/Icon';
 import type { Goal, Profile } from '../../lib/types';
 import { Empty, ErrorText } from '../../components/ui';
+import { useAuth } from '../../lib/auth';
+import { isSuperAdmin } from '../../lib/roles';
 
 interface Stakes { ultra_punishment: string; ultra_wish: string }
 interface Person { profile: Profile; goals: Goal[]; stakes: Stakes }
@@ -11,12 +13,19 @@ interface Person { profile: Profile; goals: Goal[]; stakes: Stakes }
 export default function Approvals() {
   const [showActive, setShowActive] = useState(false);
   const [people, setPeople] = useState<Person[] | null>(null);
+  const { profile: me } = useAuth();
+  const admin = isSuperAdmin(me);
 
   const load = useCallback(async () => {
+    // Mentors only handle the cohorts they mentor; Admins see everyone
+    const { data: mine } = admin ? { data: null } : await supabase.from('cohort_mentors').select('cohort_id').eq('user_id', me?.id ?? '');
+    const cohortIds = (mine ?? []).map((m) => m.cohort_id);
     const statuses = showActive ? ['pending_approval', 'active'] : ['pending_approval'];
-    const { data: profiles } = await supabase.from('profiles')
-      .select('id,username,display_name,role,status,timezone,activated_at,created_at')
-      .eq('role', 'participant').in('status', statuses).order('created_at');
+    let q = supabase.from('profiles')
+      .select('id,username,display_name,role,status,timezone,activated_at,created_at,cohort_id')
+      .eq('role', 'participant').in('status', statuses);
+    if (!admin) q = q.in('cohort_id', cohortIds);
+    const { data: profiles } = await q.order('created_at');
     const ids = (profiles ?? []).map((p) => p.id);
     const [{ data: goals }, { data: stakes }] = ids.length
       ? await Promise.all([
@@ -32,7 +41,7 @@ export default function Approvals() {
         stakes: { ultra_punishment: s?.ultra_punishment ?? '', ultra_wish: s?.ultra_wish ?? '' },
       };
     }));
-  }, [showActive]);
+  }, [showActive, admin, me?.id]);
 
   useEffect(() => { load(); }, [load]);
 

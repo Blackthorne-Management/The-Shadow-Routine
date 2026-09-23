@@ -6,7 +6,8 @@ import { timeAgo } from '../lib/dates';
 import type { ChatMessage } from '../lib/types';
 import { Empty, ErrorText, TopBar } from '../components/ui';
 import { DirectList, Who, loadPeople, type Person } from './DirectMessages';
-import { isStaff, staffLabel } from '../lib/roles';
+import { isStaff, isSuperAdmin, staffLabel } from '../lib/roles';
+import { useCohorts } from '../lib/cohorts';
 import { useDmUnread } from '../lib/badges';
 
 
@@ -18,16 +19,18 @@ import { useDmUnread } from '../lib/badges';
 export default function Chat() {
   const { profile } = useAuth();
   const isAdmin = isStaff(profile);
-  const cohort = profile?.cohort_id ?? null;
+  // Staff can read every cohort they mentor (Admins: all); they pick which one
+  const { cohorts, mentoredBy } = useCohorts();
+  const chatCohorts = isAdmin
+    ? (cohorts ?? []).filter((c) => isSuperAdmin(profile) || mentoredBy(profile?.id).includes(c.id) || c.id === profile?.cohort_id)
+    : [];
+  const [pick, setPick] = useState<string | null>(null);
+  const cohort = pick ?? profile?.cohort_id ?? null;
   const [params, setParams] = useSearchParams();
   const tab = params.get('c');
   const channel: 'cohort' | 'global' | 'direct' = tab === 'global' ? 'global' : tab === 'direct' ? 'direct' : 'cohort';
   const unread = useDmUnread(profile?.id);
-  const [cohortName, setCohortName] = useState<string | null>(null);
-  useEffect(() => {
-    if (!cohort) return;
-    supabase.from('cohorts').select('name').eq('id', cohort).maybeSingle().then(({ data }) => setCohortName(data?.name ?? null));
-  }, [cohort]);
+  const cohortName = cohorts?.find((c) => c.id === cohort)?.name ?? null;
   const [messages, setMessages] = useState<ChatMessage[] | null>(null);
   const [members, setMembers] = useState<Map<string, Person>>(new Map());
   const [text, setText] = useState('');
@@ -94,6 +97,11 @@ export default function Chat() {
           Direct{unread > 0 && <> <span className="count-badge">{unread}</span></>}
         </button>
       </div>
+      {channel === 'cohort' && chatCohorts.length > 1 && (
+        <select value={cohort ?? ''} onChange={(e) => setPick(e.target.value)} aria-label="Cohort">
+          {chatCohorts.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      )}
       {channel === 'direct' ? <DirectList /> : <>
       {!messages ? <div className="skeleton-list" /> : messages.length === 0 ? (
         <Empty>{channel === 'cohort' ? `No messages yet. Say something to ${cohortName ?? 'your cohort'}.` : 'No messages yet. This channel reaches every participant.'}</Empty>

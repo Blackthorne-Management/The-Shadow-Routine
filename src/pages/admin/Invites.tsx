@@ -4,10 +4,11 @@ import { supabase, friendlyError } from '../../lib/supabase';
 import { timeAgo } from '../../lib/dates';
 import { isSuperAdmin } from '../../lib/roles';
 import { Empty, ErrorText } from '../../components/ui';
+import { useCohorts } from '../../lib/cohorts';
 
 type InviteRole = 'participant' | 'mentor' | 'admin';
 const ROLE_LABEL: Record<InviteRole, string> = { participant: 'Participant', mentor: 'Mentor', admin: 'Admin' };
-interface Invite { id: string; code: string; role: InviteRole; note: string | null; status: 'unused' | 'used'; used_by: string | null; created_at: string; used_at: string | null }
+interface Invite { id: string; code: string; role: InviteRole; note: string | null; status: 'unused' | 'used'; cohort_id: string | null; used_by: string | null; created_at: string; used_at: string | null }
 
 export default function Invites() {
   const { profile } = useAuth();
@@ -18,6 +19,12 @@ export default function Invites() {
   const [role, setRole] = useState<InviteRole>('participant');
   const [error, setError] = useState('');
   const [copied, setCopied] = useState('');
+  const { cohorts, mentoredBy } = useCohorts();
+  // Admins invite into any cohort; Mentors into the cohorts they mentor
+  const choices = (cohorts ?? []).filter((c) => admin || mentoredBy(profile?.id).includes(c.id));
+  const [cohortPick, setCohortPick] = useState('');
+  const cohortId = cohortPick || choices[0]?.id || '';
+  const cohortName = (id: string | null) => cohorts?.find((c) => c.id === id)?.name;
 
   const load = useCallback(async () => {
     const [{ data }, { data: people }] = await Promise.all([
@@ -33,7 +40,9 @@ export default function Invites() {
     setError('');
     if (role === 'mentor' && !confirm('A mentor link gives full mentor access: approvals, reviews, invites and moderation. Create it?')) return;
     if (role === 'admin' && !confirm('An Admin link gives FULL access: everything a mentor can do, plus reading direct messages, program dates, removing people and creating more Admin links. Create it?')) return;
-    const { error } = await supabase.from('invite_codes').insert({ note: note.trim() || null, created_by: profile!.id, role });
+    if (role !== 'admin' && !cohortId) { setError('Pick a cohort first.'); return; }
+    const { error } = await supabase.from('invite_codes')
+      .insert({ note: note.trim() || null, created_by: profile!.id, role, cohort_id: role === 'admin' ? null : cohortId });
     if (error) setError(friendlyError(error)); else { setNote(''); load(); }
   }
 
@@ -67,6 +76,14 @@ export default function Invites() {
         )}
         {role === 'mentor' && <p className="hint">Mentors sign up with this link and skip goal approval. They can approve, review and invite participants, but can't read direct messages, change program dates or remove people.</p>}
         {role === 'admin' && <p className="hint">Admins sign up with this link and get full access, the same as you: every mentor tool, reading direct messages, program dates, removing people, and inviting mentors and Admins. Only send this to someone you fully trust.</p>}
+        {role !== 'admin' && (choices.length > 1 ? (
+          <label className="field inline"><span>{role === 'mentor' ? 'Mentors' : 'Joins'}</span>
+            <select value={cohortId} onChange={(e) => setCohortPick(e.target.value)}>
+              {choices.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </label>
+        ) : choices.length === 1 ? <p className="hint">{role === 'mentor' ? 'Mentors' : 'Joins'} {choices[0].name}</p>
+          : <p className="hint">You don't mentor a cohort yet, so you can't invite anyone.</p>)}
         <div className="row gap">
           <input className="grow" placeholder="Who is it for? (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
           <button className="btn primary" onClick={generate}>Generate</button>
@@ -79,6 +96,7 @@ export default function Invites() {
             <li key={i.id} className="list-row">
               <div className="grow">
                 <code className="code">{i.code}</code>{i.role !== 'participant' && <> <span className="level">{ROLE_LABEL[i.role]}</span></>}
+                {cohortName(i.cohort_id) && <span className="small muted"> · {cohortName(i.cohort_id)}</span>}
                 <p className="small muted">
                   {i.note ? `${i.note} · ` : ''}
                   {i.status === 'used'

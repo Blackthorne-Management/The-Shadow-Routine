@@ -49,6 +49,14 @@ Rules that matter for fairness run **in Postgres**, not the browser:
 - **Admins vs Mentors** (`…13_admin_roles_dms.sql`). Staff are `role = 'admin'`; staff with `is_super_admin` are **Admins**, the rest are **Mentors**. The founder account is an Admin; anyone who joins with a mentor link is a Mentor.
   - Both: approvals, workout and proof review, bonus, fallbacks, participant invites, chat moderation, and the pending-item badges.
   - Admin only: reading anyone's direct messages (**Admin → DMs**), program dates and month close-outs (**Program**), finalizing a week, removing participants, and mentor invite links. Enforced in SQL (`is_super_admin()`), not just hidden in the UI.
+- **Cohorts and their mentors** (`…19_cohort_mentors.sql`). `cohort_mentors` links staff to cohorts.
+  - A Mentor sees, approves, reviews and gets alerts only for people in the cohorts they mentor. This is enforced in row-level security (`staff_can_see`) and in the review/approve functions.
+  - Admins see every cohort and choose which (if any) they mentor, in **Me → Cohorts you mentor** or **Admin → Cohorts**.
+  - Mentor alerts go to the person's cohort mentors (`notify_cohort_mentors`). If nobody mentors that cohort, they go to the Admins.
+  - **Admin → Cohorts:** create and rename cohorts (names from the Japanese name bank), assign and remove mentors.
+  - **Admin → People:** move someone to another cohort.
+  - Invites carry a cohort: participants join it, mentors mentor it. Mentors can only invite into their own cohorts.
+  - `profiles.is_mentor` is kept in sync (= mentors at least one cohort).
 - **Direct messages:** `messages` rows with `channel = 'dm'` and a `recipient_id`. The two people read them, Admins can read all, and Mentors can't read other people's. Anyone active can DM anyone in their cohort or any staff member (`can_dm`). Unread counts come from `dm_reads` / `my_dm_threads()`. The recipient gets a `direct_messages` notification. The DM screen tells people Admins can see DMs.
 - **Staff badges:** `admin_pending_counts()` gives goal submissions, no-photo workout asks, and proof to review. The counts show on the Admin/Mentor tab and on each section.
 - **Infractions:** a rejected proof logs #1 (a warning, and the participant sees a "talk to your mentor" notice). #2 surfaces a manual **Remove participant** button for the admin.
