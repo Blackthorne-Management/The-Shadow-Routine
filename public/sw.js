@@ -4,7 +4,7 @@
 const VERSION = 'dev';
 const PRECACHE = [];
 const SHELL_CACHE = `shell-${VERSION}`;
-const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/apple-touch-icon.png', ...PRECACHE];
+const SHELL = ['/', '/manifest.webmanifest', '/theme-init.js', '/icons/icon-192.png', '/icons/apple-touch-icon.png', ...PRECACHE];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(SHELL_CACHE).then((c) => c.addAll(SHELL)));
@@ -42,7 +42,7 @@ self.addEventListener('fetch', (event) => {
   // Hashed build assets never change: cache first. ignoreVary because module
   // scripts/CSS are requested with an Origin header (crossorigin) while the
   // precache stored them without one; a Vary: Origin response would never match.
-  if (url.pathname.startsWith('/assets/') || url.pathname.startsWith('/icons/')) {
+  if (url.pathname.startsWith('/assets/') || url.pathname.startsWith('/icons/') || url.pathname === '/theme-init.js') {
     event.respondWith(
       caches.match(req, { ignoreVary: true }).then((hit) => hit || fetch(req).then((res) => {
         const copy = res.clone();
