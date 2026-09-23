@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
+import { batched } from '../lib/burst';
 import { describeTarget, isTracking } from '../lib/goals';
 import { addDays, formatDay, formatWeek, timeLeftToday } from '../lib/dates';
 import type { Band, Infraction, MonthStatus, MonthlyResult, Punishment, Reward, TodayContext, WeeklyScore } from '../lib/types';
@@ -80,10 +81,11 @@ export default function Home() {
     // Recompute once on open so pace colors reflect today, then load
     supabase.rpc('refresh_current_week').then(() => load());
     // Rank moves when anyone checks in
+    const soon = batched(load);
     const ch = supabase.channel('home-scores')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'weekly_scores' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'weekly_scores' }, soon)
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { soon.cancel(); supabase.removeChannel(ch); };
   }, [load]);
 
   if (!today || !profile) return <Splash />;

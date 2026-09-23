@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase, friendlyError } from '../../lib/supabase';
+import { batched } from '../../lib/burst';
 import { formatWeek, timeAgo } from '../../lib/dates';
 import { CATEGORY_NAMES } from '../../lib/goals';
 import type { Punishment } from '../../lib/types';
@@ -25,10 +26,11 @@ export default function Proofs() {
 
   useEffect(() => {
     load();
+    const soon = batched(load);
     const ch = supabase.channel('admin-proofs')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'punishments' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'punishments' }, soon)
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { soon.cancel(); supabase.removeChannel(ch); };
   }, [load]);
 
   return (

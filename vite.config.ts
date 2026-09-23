@@ -33,4 +33,18 @@ function swPrecache(): Plugin {
 export default defineConfig({
   plugins: [react(), swPrecache()],
   server: { port: 5173 },
+  build: {
+    rollupOptions: {
+      output: {
+        // Libraries change rarely: in their own files they stay cached across
+        // app deploys, so an update only re-downloads the app's own code.
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          if (id.includes('@supabase')) return 'supabase';
+          if (/node_modules\/(react|react-dom|react-router|react-router-dom|scheduler)\//.test(id)) return 'react';
+          return undefined;
+        },
+      },
+    },
+  },
 });

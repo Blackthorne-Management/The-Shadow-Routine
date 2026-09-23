@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase } from '../../lib/supabase';
+import { batched } from '../../lib/burst';
 import { formatWeek, localDate, timeAgo, weekStart } from '../../lib/dates';
 import LeaderboardList from '../../components/LeaderboardList';
 import { Empty } from '../../components/ui';
@@ -35,10 +36,11 @@ export default function Overview() {
   useEffect(() => {
     supabase.rpc('refresh_current_week').then(); // lazy builder: .then() sends it
     loadFeed();
+    const soon = batched(loadFeed);
     const ch = supabase.channel('admin-feed')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_entries' }, () => loadFeed())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_entries' }, soon)
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { soon.cancel(); supabase.removeChannel(ch); };
   }, [loadFeed]);
 
   return (

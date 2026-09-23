@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { batched } from '../lib/burst';
 import { SCORED_CATEGORIES } from '../lib/goals';
 import type { WeeklyScore } from '../lib/types';
 import { rankRows } from '../lib/ranking';
@@ -60,12 +61,13 @@ export default function LeaderboardList({ week, meId, cohortId, cohortNames }: {
   useEffect(() => {
     prevRanks.current = new Map();
     load();
+    const soon = batched(load);
     const ch = supabase.channel(`board-${week}-${cohortId ?? 'all'}`)
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'weekly_scores', filter: `week_start_date=eq.${week}` },
-        () => load())
+        soon)
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { soon.cancel(); supabase.removeChannel(ch); };
   }, [week, cohortId, load]);
 
   if (!rows) return <div className="skeleton-list" />;
@@ -145,10 +147,11 @@ export function OverallList({ meId, cohortId, cohortNames }: {
 
   useEffect(() => {
     load();
+    const soon = batched(load);
     const ch = supabase.channel(`overall-${cohortId ?? 'all'}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'weekly_scores' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'weekly_scores' }, soon)
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { soon.cancel(); supabase.removeChannel(ch); };
   }, [cohortId, load]);
 
   if (!rows) return <div className="skeleton-list" />;

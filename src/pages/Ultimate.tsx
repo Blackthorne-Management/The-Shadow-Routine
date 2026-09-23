@@ -2,6 +2,7 @@ import { Fragment, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
+import { batched } from '../lib/burst';
 import { localDate } from '../lib/dates';
 import { CUT_WEEKS, GREEN_WEEK, buildBracket, type Bracket, type Contender, type Stage, type Standing } from '../lib/ultimate';
 import { titleFor } from '../lib/ranks';
@@ -116,10 +117,11 @@ export default function Ultimate() {
       setBracket(buildBracket(contenders, rows ?? [], start, localDate(profile?.timezone ?? 'UTC')));
     };
     load();
+    const soon = batched(load);
     const ch = supabase.channel('ultimate')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'weekly_scores' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'weekly_scores' }, soon)
       .subscribe();
-    return () => { live = false; supabase.removeChannel(ch); };
+    return () => { live = false; soon.cancel(); supabase.removeChannel(ch); };
   }, [profile?.timezone]);
 
   if (!bracket) return <main className="screen with-tabs"><TopBar pill="Ultimate" /><div className="skeleton-list" /></main>;

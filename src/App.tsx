@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './lib/auth';
 import { hasRequiredGoals } from './lib/goals';
@@ -6,24 +6,26 @@ import { isConfigured } from './lib/supabase';
 import TabBar from './components/TabBar';
 import { Splash } from './components/ui';
 import Login from './pages/Login';
-import Join from './pages/Join';
-import ProposeGoals from './pages/ProposeGoals';
-import AwaitingApproval from './pages/AwaitingApproval';
 import Removed from './pages/Removed';
 import Home from './pages/Home';
 import CheckIn from './pages/CheckIn';
-import Leaderboard from './pages/Leaderboard';
-import Settings from './pages/Settings';
-import Setup from './pages/Setup';
-import PunishmentPage from './pages/Punishment';
-import RankPath from './pages/RankPath';
-import Chat from './pages/Chat';
-import DirectMessagePage from './pages/DirectMessages';
-import Ultimate from './pages/Ultimate';
-import Notifications from './pages/Notifications';
-import Onboarding from './pages/Onboarding';
-import ResetPassword from './pages/ResetPassword';
-// Participants never download the admin dashboard
+// Sign-in, Today and the check-in load first; everything else is fetched the
+// first time it's opened (smaller first download on a phone). Participants
+// never download the admin dashboard.
+const Join = lazy(() => import('./pages/Join'));
+const ProposeGoals = lazy(() => import('./pages/ProposeGoals'));
+const AwaitingApproval = lazy(() => import('./pages/AwaitingApproval'));
+const Leaderboard = lazy(() => import('./pages/Leaderboard'));
+const Settings = lazy(() => import('./pages/Settings'));
+const Setup = lazy(() => import('./pages/Setup'));
+const PunishmentPage = lazy(() => import('./pages/Punishment'));
+const RankPath = lazy(() => import('./pages/RankPath'));
+const Chat = lazy(() => import('./pages/Chat'));
+const DirectMessagePage = lazy(() => import('./pages/DirectMessages'));
+const Ultimate = lazy(() => import('./pages/Ultimate'));
+const Notifications = lazy(() => import('./pages/Notifications'));
+const Onboarding = lazy(() => import('./pages/Onboarding'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const Admin = lazy(() => import('./pages/admin/Admin'));
 
 export default function App() {
@@ -53,7 +55,7 @@ export default function App() {
     return (
       <>
         <Routes>
-          <Route path="/admin/*" element={<Suspense fallback={<Splash />}><Admin /></Suspense>} />
+          <Route path="/admin/*" element={<Admin />} />
           {/* A mentor who joined the cohort checks in like everyone else */}
           <Route path="/my-goals" element={<ProposeGoals mentor />} />
           {profile.mentor_participates && hasRequiredGoals(goals) && <>

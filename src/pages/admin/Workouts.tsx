@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase, friendlyError } from '../../lib/supabase';
+import { batched } from '../../lib/burst';
 import { addDays, formatDay, localDate } from '../../lib/dates';
 import type { Workout } from '../../lib/types';
 import MediaThumb from '../../components/MediaThumb';
@@ -28,10 +29,11 @@ export default function Workouts() {
 
   useEffect(() => {
     load();
+    const soon = batched(load);
     const ch = supabase.channel('admin-workouts')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'workouts' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'workouts' }, soon)
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { soon.cancel(); supabase.removeChannel(ch); };
   }, [load]);
 
   return (
