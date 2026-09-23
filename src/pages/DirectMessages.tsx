@@ -177,8 +177,9 @@ export function DirectThread({ a, b, readOnly = false, back }: { a: string; b: s
   async function remove(m: ChatMessage) {
     if (!confirm('Delete this message?')) return;
     const { error } = await supabase.from('messages').delete().eq('id', m.id);
-    if (error) setError(friendlyError(error));
-    else setMessages((list) => list?.filter((x) => x.id !== m.id) ?? null);
+    if (error) return setError(friendlyError(error));
+    setMessages((list) => list?.filter((x) => x.id !== m.id) ?? null);
+    if (m.media_path && m.user_id === profile?.id) supabase.storage.from('chat').remove([m.media_path]).then();
   }
 
   const pa = people.get(a), pb = people.get(b);

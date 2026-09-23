@@ -74,8 +74,10 @@ export default function Chat() {
   async function remove(m: ChatMessage) {
     if (!confirm('Delete this message for everyone?')) return;
     const { error } = await supabase.from('messages').delete().eq('id', m.id);
-    if (error) setError(friendlyError(error));
-    else setMessages((list) => list?.filter((x) => x.id !== m.id) ?? null);
+    if (error) return setError(friendlyError(error));
+    setMessages((list) => list?.filter((x) => x.id !== m.id) ?? null);
+    // Your own photo/video goes with it (storage only lets you remove your own files)
+    if (m.media_path && m.user_id === profile?.id) supabase.storage.from('chat').remove([m.media_path]).then();
   }
 
   return (

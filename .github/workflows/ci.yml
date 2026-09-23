@@ -1,0 +1,25 @@
+# Runs on every push and pull request: type-check, database tests (in-memory
+# Postgres, no secrets needed), bracket logic, and a production build.
+# Make it a required check in branch protection so broken changes can't merge.
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit -p .
+      - run: npm run test:sql
+      - run: npm run test:bracket
+      - run: npm run build
