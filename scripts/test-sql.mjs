@@ -519,4 +519,24 @@ assert.equal(Number((await one(`select cumulative_cycle_points from profiles whe
   'a participating mentor builds cycle points');
 console.log('✓ participating staff build cycle points');
 
+// --- An Admin can be a mentor or not ---------------------------------------------
+await assert.rejects(as(M2, `select set_is_mentor(false)`), /ADMIN_ONLY/, "a Mentor can't stop being a mentor");
+const mentorAlerts = async (uid) => (await one(`select count(*)::int n from notifications where user_id=$1 and type='admin_proofs'`, [uid])).n;
+const fire = (tag) => db.query(`select notify_admins('admin_proofs', 'Proof', $1, '/admin/proofs')`, [tag]);
+let mb = [await mentorAlerts(ADMIN), await mentorAlerts(M2)];
+await fire('both');
+assert.deepEqual([await mentorAlerts(ADMIN), await mentorAlerts(M2)], [mb[0] + 1, mb[1] + 1], 'Admin + Mentor both get mentor alerts');
+await as(ADMIN, `select set_is_mentor(false)`);
+mb = [await mentorAlerts(ADMIN), await mentorAlerts(M2)];
+await fire('mentor only');
+assert.deepEqual([await mentorAlerts(ADMIN), await mentorAlerts(M2)], [mb[0], mb[1] + 1], 'a non-mentor Admin stops getting mentor alerts');
+// No active mentor left: alerts fall back to the Admin
+await db.query(`update profiles set status='removed' where id=$1`, [M2]);
+mb = await mentorAlerts(ADMIN);
+await fire('fallback');
+assert.equal(await mentorAlerts(ADMIN), mb + 1, 'with no mentors, the Admin still hears about it');
+await db.query(`update profiles set status='active' where id=$1`, [M2]);
+await as(ADMIN, `select set_is_mentor(true)`);
+console.log('✓ an Admin can be a mentor or not');
+
 console.log('\nAll SQL tests passed.');

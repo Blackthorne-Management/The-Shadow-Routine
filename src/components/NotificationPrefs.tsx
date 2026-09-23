@@ -8,7 +8,10 @@ import { ErrorText } from './ui';
 /** Per-type on/off switches, saved to notification_settings.prefs. */
 export default function NotificationPrefs() {
   const { profile, notif, refresh } = useAuth();
-  const defs = profile?.role === 'admin' ? ADMIN_PREFS : PARTICIPANT_PREFS;
+  // An Admin who isn't a mentor doesn't get mentor alerts, so those switches are hidden
+  const defs = profile?.role === 'admin'
+    ? ADMIN_PREFS.filter((d) => profile.is_mentor || !d.key.startsWith('admin_'))
+    : PARTICIPANT_PREFS;
   const [prefs, setPrefs] = useState<Record<string, boolean>>(notif?.prefs ?? {});
   const [error, setError] = useState('');
 

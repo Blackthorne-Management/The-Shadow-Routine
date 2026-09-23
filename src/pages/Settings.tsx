@@ -10,7 +10,8 @@ import RankCard from '../components/RankCard';
 import Emblem from '../components/Emblem';
 import NotificationPrefs from '../components/NotificationPrefs';
 import AppearanceSettings from '../components/AppearanceSettings';
-import { staffLabel } from '../lib/roles';
+import { isSuperAdmin, staffLabel } from '../lib/roles';
+import MentorDuties from '../components/MentorDuties';
 import MentorParticipation from '../components/MentorParticipation';
 
 export default function Settings() {
@@ -55,6 +56,7 @@ export default function Settings() {
         <RankCard points={Number(profile.cumulative_cycle_points ?? 0)} sex={profile.sex} />
       )}
 
+      {isSuperAdmin(profile) && <MentorDuties />}
       {profile?.role === 'admin' && <MentorParticipation />}
 
       <section className="card">

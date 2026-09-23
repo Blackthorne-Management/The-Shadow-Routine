@@ -6,7 +6,7 @@ import { pendingTotal, useDmUnread, usePendingCounts } from '../lib/badges';
 export default function TabBar({ admin = false, mentorToday = false }: { admin?: boolean; mentorToday?: boolean }) {
   const { pathname } = useLocation();
   const { profile } = useAuth();
-  const pending = pendingTotal(usePendingCounts(admin, profile?.id));
+  const pending = pendingTotal(usePendingCounts(admin && !!profile?.is_mentor, profile?.id));
   const unread = useDmUnread(profile?.id);
   // The check-in wizard and first-run setup are full-screen
   if (pathname.startsWith('/checkin') || pathname.startsWith('/setup') || pathname.startsWith('/how-it-works')) return null;

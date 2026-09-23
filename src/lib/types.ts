@@ -29,6 +29,8 @@ export interface Profile {
   mentor_participates: boolean;
   /** staff (role 'admin') with this flag are Admins; without it, Mentors */
   is_super_admin: boolean;
+  /** staff who do the day-to-day mentoring (always true for Mentors; Admins choose) */
+  is_mentor: boolean;
 }
 
 export interface ChatMessage {
