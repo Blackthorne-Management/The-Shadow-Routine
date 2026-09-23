@@ -539,4 +539,15 @@ await db.query(`update profiles set status='active' where id=$1`, [M2]);
 await as(ADMIN, `select set_is_mentor(true)`);
 console.log('✓ an Admin can be a mentor or not');
 
+// --- Admin invites ---------------------------------------------------------------
+await assert.rejects(asUser(M2, `insert into invite_codes (code, role) values ('ADMX', 'admin')`), /row-level security/,
+  "a Mentor can't create an Admin invite");
+await asUser(ADMIN, `insert into invite_codes (code, role) values ('ADMY', 'admin')`);
+const A2 = '00000000-0000-0000-0000-0000000000a2';
+await signup(A2, 'ADMY', 'admin2');
+const a2 = await one(`select role, status, is_super_admin, is_mentor from profiles where id=$1`, [A2]);
+assert.deepEqual([a2.role, a2.status, a2.is_super_admin, a2.is_mentor], ['admin', 'active', true, true], 'an Admin invite creates an active Admin');
+assert.equal((await as(A2, `select is_super_admin() v`)).rows[0].v, true);
+console.log('✓ admin invites');
+
 console.log('\nAll SQL tests passed.');

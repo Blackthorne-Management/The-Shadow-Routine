@@ -5,7 +5,9 @@ import { timeAgo } from '../../lib/dates';
 import { isSuperAdmin } from '../../lib/roles';
 import { Empty, ErrorText } from '../../components/ui';
 
-interface Invite { id: string; code: string; role: 'participant' | 'mentor'; note: string | null; status: 'unused' | 'used'; used_by: string | null; created_at: string; used_at: string | null }
+type InviteRole = 'participant' | 'mentor' | 'admin';
+const ROLE_LABEL: Record<InviteRole, string> = { participant: 'Participant', mentor: 'Mentor', admin: 'Admin' };
+interface Invite { id: string; code: string; role: InviteRole; note: string | null; status: 'unused' | 'used'; used_by: string | null; created_at: string; used_at: string | null }
 
 export default function Invites() {
   const { profile } = useAuth();
@@ -13,7 +15,7 @@ export default function Invites() {
   const [invites, setInvites] = useState<Invite[] | null>(null);
   const [names, setNames] = useState<Map<string, string>>(new Map());
   const [note, setNote] = useState('');
-  const [role, setRole] = useState<'participant' | 'mentor'>('participant');
+  const [role, setRole] = useState<InviteRole>('participant');
   const [error, setError] = useState('');
   const [copied, setCopied] = useState('');
 
@@ -30,6 +32,7 @@ export default function Invites() {
   async function generate() {
     setError('');
     if (role === 'mentor' && !confirm('A mentor link gives full mentor access: approvals, reviews, invites and moderation. Create it?')) return;
+    if (role === 'admin' && !confirm('An Admin link gives FULL access: everything a mentor can do, plus reading direct messages, program dates, removing people and creating more Admin links. Create it?')) return;
     const { error } = await supabase.from('invite_codes').insert({ note: note.trim() || null, created_by: profile!.id, role });
     if (error) setError(friendlyError(error)); else { setNote(''); load(); }
   }
@@ -40,11 +43,11 @@ export default function Invites() {
     load();
   }
 
-  async function share(code: string, asMentor: boolean) {
+  async function share(code: string, as: InviteRole) {
     const url = `${location.origin}/join?code=${code}`;
-    const text = asMentor
-      ? `You're invited to be a mentor on The Shadow Routine. Join here: ${url} (code ${code})`
-      : `You're invited to The Shadow Routine. Join here: ${url} (code ${code})`;
+    const text = as === 'participant'
+      ? `You're invited to The Shadow Routine. Join here: ${url} (code ${code})`
+      : `You're invited to be ${as === 'admin' ? 'an admin' : 'a mentor'} on The Shadow Routine. Join here: ${url} (code ${code})`;
     try {
       if (navigator.share) await navigator.share({ text });
       else { await navigator.clipboard.writeText(text); setCopied(code); setTimeout(() => setCopied(''), 1500); }
@@ -59,9 +62,11 @@ export default function Invites() {
           <div className="seg" role="radiogroup" aria-label="Invite as">
             <button className={role === 'participant' ? 'on' : ''} onClick={() => setRole('participant')}>Participant</button>
             <button className={role === 'mentor' ? 'on' : ''} onClick={() => setRole('mentor')}>Mentor</button>
+            <button className={role === 'admin' ? 'on' : ''} onClick={() => setRole('admin')}>Admin</button>
           </div>
         )}
         {role === 'mentor' && <p className="hint">Mentors sign up with this link and skip goal approval. They can approve, review and invite participants, but can't read direct messages, change program dates or remove people.</p>}
+        {role === 'admin' && <p className="hint">Admins sign up with this link and get full access, the same as you: every mentor tool, reading direct messages, program dates, removing people, and inviting mentors and Admins. Only send this to someone you fully trust.</p>}
         <div className="row gap">
           <input className="grow" placeholder="Who is it for? (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
           <button className="btn primary" onClick={generate}>Generate</button>
@@ -73,7 +78,7 @@ export default function Invites() {
           {invites.map((i) => (
             <li key={i.id} className="list-row">
               <div className="grow">
-                <code className="code">{i.code}</code>{i.role === 'mentor' && <> <span className="level">Mentor</span></>}
+                <code className="code">{i.code}</code>{i.role !== 'participant' && <> <span className="level">{ROLE_LABEL[i.role]}</span></>}
                 <p className="small muted">
                   {i.note ? `${i.note} · ` : ''}
                   {i.status === 'used'
@@ -83,7 +88,7 @@ export default function Invites() {
               </div>
               {i.status === 'unused' ? (
                 <>
-                  <button className="btn small" onClick={() => share(i.code, i.role === 'mentor')}>{copied === i.code ? 'Copied' : 'Share'}</button>
+                  <button className="btn small" onClick={() => share(i.code, i.role)}>{copied === i.code ? 'Copied' : 'Share'}</button>
                   {(admin || i.role === 'participant') && <button className="icon-btn small" aria-label="Delete code" onClick={() => revoke(i.id)}>✕</button>}
                 </>
               ) : <span className="pill">Used</span>}
