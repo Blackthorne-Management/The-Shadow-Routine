@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { CYCLE_MAX, LEVELS, levelFor, nextLevel, titleFor } from '../lib/ranks';
 import type { Sex } from '../lib/types';
 import Emblem from './Emblem';
@@ -9,8 +9,8 @@ const fmt = (n: number) => Math.round(n).toLocaleString();
  * Cumulative cycle points toward the next rank. With `from`, the bar starts at
  * the old total and animates up to the new one (after a check-in).
  */
-export default function RankCard({ points, sex, name, from }: {
-  points: number; sex: Sex | null; name?: string; from?: number;
+export default function RankCard({ points, sex, name, from, tag }: {
+  points: number; sex: Sex | null; name?: string; from?: number; tag?: ReactNode;
 }) {
   const [shown, setShown] = useState(from ?? points);
   useEffect(() => {
@@ -35,7 +35,7 @@ export default function RankCard({ points, sex, name, from }: {
         <div className="grow">
           {name ? <>
             <p className="rank-name">{name}</p>
-            <p className="rank-title">{titleFor(level, sex)}</p>
+            <p className="rank-title">{titleFor(level, sex)}{tag && <> <span className="level">{tag}</span></>}</p>
           </> : <>
             <p className="stat-label">{titleFor(level, sex)}</p>
             <p className="stat-sub">Rank {level} of 10</p>

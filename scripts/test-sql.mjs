@@ -511,4 +511,12 @@ assert.equal((await one(`select image_url from emblems where rank_level=1 and pa
 assert.equal((await one(`select image_url from emblems where rank_level=3 and path='female'`)).image_url, null);
 console.log('✓ female titles, emblem art');
 
+// --- Participating staff build cycle points ----------------------------------------
+await db.query(`update profiles set mentor_participates = true where id = $1`, [M2]);
+await db.query(`insert into weekly_scores (user_id, week_start_date, total_points) values ($1, program_start(), 321)
+                on conflict (user_id, week_start_date) do update set total_points = 321`, [M2]);
+assert.equal(Number((await one(`select cumulative_cycle_points from profiles where id=$1`, [M2])).cumulative_cycle_points), 321,
+  'a participating mentor builds cycle points');
+console.log('✓ participating staff build cycle points');
+
 console.log('\nAll SQL tests passed.');

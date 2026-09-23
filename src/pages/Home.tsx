@@ -7,7 +7,8 @@ import { addDays, formatDay, formatWeek, timeLeftToday } from '../lib/dates';
 import type { Band, Infraction, MonthStatus, MonthlyResult, Punishment, Reward, TodayContext, WeeklyScore } from '../lib/types';
 import MonthPanel from '../components/MonthPanel';
 import RankCard from '../components/RankCard';
-import { staffLabel } from '../lib/roles';
+import { isStaff, staffLabel } from '../lib/roles';
+import { LEVELS } from '../lib/ranks';
 import { ProgressBar, Splash, TickMeter, TopBar } from '../components/ui';
 import { Icon, ThemeIcon } from '../components/Icon';
 
@@ -81,8 +82,9 @@ export default function Home() {
       <TopBar scene pill={score?.consistency_rank ? `#${score.consistency_rank} rank` : formatDay(today.date, { weekday: 'short' })} />
 
       <div className="linked">
-        {profile.role === 'participant'
-          ? <RankCard points={Number(profile.cumulative_cycle_points ?? 0)} sex={profile.sex} name={profile.display_name} />
+        {profile.role === 'participant' || profile.mentor_participates
+          ? <RankCard points={Number(profile.cumulative_cycle_points ?? 0)} sex={profile.sex} name={profile.display_name}
+              tag={isStaff(profile) ? staffLabel(profile) : undefined} />
           : (
             <section className="card">
               <div className="rank-head">
@@ -106,6 +108,8 @@ export default function Home() {
         </section>
       </div>
 
+
+      {isStaff(profile) && profile.mentor_participates && !profile.sex && <PickRankPath />}
 
       {notices.map((n) => (
         <div key={n.id} className="notice red">
@@ -237,5 +241,27 @@ export default function Home() {
         Mid-week you're never red. A week that closes under 60% of a target triggers that goal's punishment.
       </p>
     </main>
+  );
+}
+
+/** Staff never picked a rank path at signup; once they check in they choose one here. */
+function PickRankPath() {
+  const { refresh } = useAuth();
+  const [busy, setBusy] = useState(false);
+  async function pick(sex: 'male' | 'female') {
+    setBusy(true);
+    await supabase.rpc('set_rank_path', { p_sex: sex });
+    await refresh();
+    setBusy(false);
+  }
+  return (
+    <div className="notice">
+      <strong>Pick your rank path</strong>
+      <p>Titles for ranks 3–9 differ by path: {LEVELS[2].male} → {LEVELS[8].male}, or {LEVELS[2].female} → {LEVELS[8].female}.</p>
+      <div className="row gap">
+        <button className="btn small" disabled={busy} onClick={() => pick('male')}>Male path</button>
+        <button className="btn small" disabled={busy} onClick={() => pick('female')}>Female path</button>
+      </div>
+    </div>
   );
 }
