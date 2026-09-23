@@ -159,6 +159,14 @@ Messages use the founder's wording from the original spec text.
   13. **Izanagi / Izanami**: the creator pair (good for a founding or combined cohort)
 - Done 2026-09-23: "Cohort 1" is renamed **Marishiten**, and the name shows on the chat tab, the message box and chat notifications. Still to build: naming new cohorts (part of the multi-cohort build).
 
+## 17. The Ultimate Shadow (built 2026-09-23)
+- A bracket of all cohorts on the Board ("The Ultimate Shadow" button).
+- No earlier rules were on record, so this default format was used (easy to change in `src/lib/ultimate.ts`):
+  - Score = average weekly points per member.
+  - Round 1 (weeks 1–2), top 8 of 10 move on. Quarterfinals (3–4), 1v8 / 2v7 / 3v6 / 4v5. Semifinals (5–6). Final (7–10).
+- Test data: 8 more cohorts (Hachiman, Bishamonten, Raijin, Fūjin, Susanoo, Tsukuyomi, Amaterasu, Takemikazuchi), each with one test member (Kenji, Mika, Taro, Yumi, Ren, Aiko, Haru, Sora). They have no password, so nobody can sign in as them.
+- Cohort emblem art is still to come (`cohorts.emblem_url`).
+
 ## 8. (Unclear) "We'll graph the punishments"
 - Means a chart of punishments over time? Or writing up the real punishment list? *(Possibly covered now by #6.)*
 

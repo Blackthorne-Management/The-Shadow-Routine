@@ -18,6 +18,7 @@ import PunishmentPage from './pages/Punishment';
 import RankPath from './pages/RankPath';
 import Chat from './pages/Chat';
 import DirectMessagePage from './pages/DirectMessages';
+import Ultimate from './pages/Ultimate';
 import Notifications from './pages/Notifications';
 import Onboarding from './pages/Onboarding';
 // Participants never download the admin dashboard
@@ -54,6 +55,7 @@ export default function App() {
             <Route path="/checkin" element={<CheckIn />} />
           </>}
           <Route path="/board" element={<Leaderboard />} />
+          <Route path="/ultimate" element={<Ultimate />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/chat/dm/:id" element={<DirectMessagePage />} />
           <Route path="/notifications" element={<Notifications />} />
@@ -91,6 +93,7 @@ export default function App() {
         <Route path="/" element={needsSetup ? <Navigate to="/setup" replace /> : <Home />} />
         <Route path="/checkin" element={<CheckIn />} />
         <Route path="/board" element={<Leaderboard />} />
+          <Route path="/ultimate" element={<Ultimate />} />
         <Route path="/chat" element={<Chat />} />
           <Route path="/chat/dm/:id" element={<DirectMessagePage />} />
         <Route path="/notifications" element={<Notifications />} />

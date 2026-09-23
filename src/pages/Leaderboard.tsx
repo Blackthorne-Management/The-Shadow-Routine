@@ -4,6 +4,8 @@ import { supabase } from '../lib/supabase';
 import { formatWeek, localDate, weekStart } from '../lib/dates';
 import LeaderboardList, { OverallList } from '../components/LeaderboardList';
 import { TopBar } from '../components/ui';
+import { Link } from 'react-router-dom';
+import { Icon } from '../components/Icon';
 import { useViewCohorts } from '../lib/cohorts';
 
 export default function Leaderboard() {
@@ -21,6 +23,7 @@ export default function Leaderboard() {
   return (
     <main className="screen with-tabs">
       <TopBar pill="Live" />
+      <Link to="/ultimate" className="ult-button"><Icon name="crown" size={18} /> The Ultimate Shadow</Link>
       <div className="card">
         <p className="eyebrow">{period === 'week' ? formatWeek(thisWeek) : 'The whole program so far'}</p>
         <h1>Leaderboard</h1>

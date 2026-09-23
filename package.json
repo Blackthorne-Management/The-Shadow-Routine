@@ -11,7 +11,8 @@
     "icons": "node scripts/gen-icons.mjs",
     "test:sql": "node scripts/test-sql.mjs",
     "vapid": "web-push generate-vapid-keys",
-    "emblems": "node scripts/cut-emblems.mjs"
+    "emblems": "node scripts/cut-emblems.mjs",
+    "test:bracket": "node scripts/test-ultimate.mjs"
   },
   "dependencies": {
     "@fontsource-variable/inter-tight": "^5.3.0",
