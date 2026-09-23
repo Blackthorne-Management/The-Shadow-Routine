@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { supabase, friendlyError } from '../lib/supabase';
 import { ErrorText } from './ui';
+import { hasRequiredGoals } from '../lib/goals';
 
 /** Mentor-only: check in alongside the cohort, scored but unranked. */
 export default function MentorParticipation() {
@@ -11,7 +12,7 @@ export default function MentorParticipation() {
   const [error, setError] = useState('');
   if (!profile) return null;
   const on = profile.mentor_participates;
-  const ready = goals.length === 5;
+  const ready = hasRequiredGoals(goals);
 
   async function toggle(next: boolean) {
     setBusy(true); setError('');

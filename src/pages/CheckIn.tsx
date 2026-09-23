@@ -209,7 +209,7 @@ function QuestionCard({ goal, title, eyebrow }: { goal: Goal; title: string; eye
     <section className="card q-card">
       <div className="row between">
         <span className="goal-icon"><ThemeIcon theme={goal.theme} /></span>
-        <span className="level">{goal.category_point_max} pts</span>
+        <span className="level">{goal.category_point_max > 0 ? `${goal.category_point_max} pts` : 'Tracking only'}</span>
       </div>
       <div className="stack tight">
         <p className="eyebrow">{eyebrow ?? goal.label}</p>

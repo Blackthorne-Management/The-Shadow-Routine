@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
-import { describeTarget } from '../lib/goals';
+import { describeTarget, isTracking } from '../lib/goals';
 import { addDays, formatDay, formatWeek, timeLeftToday } from '../lib/dates';
 import type { Band, Infraction, MonthStatus, MonthlyResult, Punishment, Reward, TodayContext, WeeklyScore } from '../lib/types';
 import MonthPanel from '../components/MonthPanel';
@@ -29,6 +29,7 @@ export default function Home() {
   const [month, setMonth] = useState<MonthStatus | null>(null);
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [results, setResults] = useState<MonthlyResult[]>([]);
+  const [tracked, setTracked] = useState(0);
 
   const load = useCallback(async () => {
     if (!profile) return;
@@ -38,7 +39,7 @@ export default function Home() {
     const [s, n, e, p, i, m, r, mr] = await Promise.all([
       supabase.from('weekly_scores').select('*').eq('user_id', profile.id).eq('week_start_date', t.week_start).maybeSingle(),
       supabase.from('weekly_scores').select('user_id,total_points,band_per_category,consistency_rank').eq('week_start_date', t.week_start),
-      supabase.from('daily_entries').select('entry_date,value_reported').eq('user_id', profile.id)
+      supabase.from('daily_entries').select('entry_date,value_reported,goal_id').eq('user_id', profile.id)
         .gte('entry_date', t.week_start).lte('entry_date', addDays(t.week_start, 6)),
       supabase.from('punishments').select('*').eq('user_id', profile.id).neq('proof_status', 'accepted').order('created_at', { ascending: false }),
       supabase.from('infractions').select('*').eq('user_id', profile.id).is('acknowledged_at', null),
@@ -64,11 +65,16 @@ export default function Home() {
     });
     // Goals with progress, per day of the week
     const perDay: Record<string, number> = {};
-    for (const row of e.data ?? []) if (Number(row.value_reported) > 0) perDay[row.entry_date] = (perDay[row.entry_date] ?? 0) + 1;
+    const trackingGoal = goals.find((g) => isTracking(g));
+    for (const row of e.data ?? []) {
+      if (row.goal_id === trackingGoal?.id) continue;
+      if (Number(row.value_reported) > 0) perDay[row.entry_date] = (perDay[row.entry_date] ?? 0) + 1;
+    }
+    setTracked((e.data ?? []).filter((r) => r.goal_id === trackingGoal?.id).reduce((a, r) => a + Number(r.value_reported), 0));
     setDaily(perDay);
     setPunishments((p.data as Punishment[]) ?? []);
     setNotices((i.data as Infraction[]) ?? []);
-  }, [profile]);
+  }, [profile, goals]);
 
   useEffect(() => {
     // Recompute once on open so pace colors reflect today, then load
@@ -185,7 +191,7 @@ export default function Home() {
           </div>
         </div>
         <ul className="cat-list">
-          {goals.map((g) => {
+          {goals.filter((g) => !isTracking(g)).map((g) => {
             const cs = score?.category_scores?.[g.category];
             const pace = cs?.pace_band ?? null;
             return (
@@ -203,6 +209,19 @@ export default function Home() {
               </li>
             );
           })}
+          {goals.filter(isTracking).map((g) => (
+            <li key={g.id}>
+              <div className="cat-row">
+                <span className="goal-icon sm"><ThemeIcon theme={g.theme} /></span>
+                <span className="grow cat-label">{g.label}</span>
+                <span className="pill">Tracking</span>
+              </div>
+              <div className="cat-meta">
+                <span>{g.goal_type === 'percentage' ? `${tracked} ${g.unit} logged this week` : `${tracked} day${tracked === 1 ? '' : 's'} this week`}</span>
+                <span>Not scored</span>
+              </div>
+            </li>
+          ))}
         </ul>
       </section>
 

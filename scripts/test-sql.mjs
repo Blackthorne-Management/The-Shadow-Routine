@@ -669,4 +669,36 @@ await asUser(U1, `insert into messages (channel, user_id, recipient_id, message_
 assert.equal((await as(U9, `select last_text from my_dm_threads() where other_id=$1`, [U1])).rows[0].last_text, 'Video');
 console.log('✓ chat media: photo/video/GIF messages, previews, ownership');
 
+// --- Goal slots: 5 required (Reading + Eating fixed) + optional tracking goal -------------
+await db.query(`insert into invite_codes (code) values ('SLOTS1')`);
+const U7 = '00000000-0000-0000-0000-000000000007';
+await signup(U7, 'SLOTS1', 'slots');
+const slotGoals = [
+  { ...goals[0] }, { ...goals[1] },
+  { category: 'custom_1', theme: 'other', goal_type: 'binary', label: 'Read 7 chapters of nonfiction', prompt: '', target_value: 7, unit: 'pages', ...stakes('reading') },
+  { category: 'custom_2', theme: 'content', goal_type: 'percentage', label: 'Follow my keto diet', prompt: '', target_value: 6, unit: 'x', ...stakes('eating') },
+  { ...goals[4] },
+  { category: 'custom_4', theme: 'other', goal_type: 'percentage', label: 'Drink water', prompt: 'How many glasses today?', target_value: 56, unit: 'glasses' },
+];
+// Missing Reading → rejected; 6th slot needs no consequences
+await assert.rejects(as(U7, `select submit_goals($1, $2)`, [JSON.stringify(slotGoals.filter((g) => g.category !== 'custom_1')), CONSEQ]), /NEED_FIVE_GOALS/);
+await as(U7, `select submit_goals($1, $2)`, [JSON.stringify(slotGoals), CONSEQ]);
+const slot = async (c) => one(`select theme, goal_type, unit, prompt, category_point_max from goals where user_id=$1 and category=$2`, [U7, c]);
+assert.deepEqual(await slot('custom_1'), { theme: 'reading', goal_type: 'percentage', unit: 'chapters', prompt: 'How many chapters did you read today?', category_point_max: 200 });
+assert.deepEqual(await slot('custom_2'), { theme: 'nutrition', goal_type: 'binary', unit: 'days', prompt: 'Did you stick to your diet today?', category_point_max: 150 });
+assert.equal((await slot('custom_4')).category_point_max, 0);
+// Approving: 5 scored goals is enough; the tracking goal never gets a band or points
+await as(ADMIN, `select approve_goals($1, '[]')`, [U7]);
+assert.equal((await one(`select status from profiles where id=$1`, [U7])).status, 'active');
+const g7 = Object.fromEntries((await db.query(`select category, id from goals where user_id=$1`, [U7])).rows.map((r) => [r.category, r.id]));
+await as(U7, `select submit_checkin($1, null, '[]')`, [JSON.stringify([
+  { goal_id: g7.refraining, value: 1 }, { goal_id: g7.custom_1, value: 2 }, { goal_id: g7.custom_2, value: 1 },
+  { goal_id: g7.custom_3, value: 1 }, { goal_id: g7.custom_4, value: 8 }])]);
+const ws7 = await one(`select band_per_category b, category_scores s from weekly_scores where user_id=$1 order by week_start_date desc limit 1`, [U7]);
+assert.deepEqual(Object.keys(ws7.b).sort(), ['custom_1', 'custom_2', 'custom_3', 'gym', 'refraining'], 'tracking goal has no band');
+assert.ok(!('custom_4' in ws7.s));
+assert.equal((await one(`select value_reported v from daily_entries where goal_id=$1`, [g7.custom_4])).v, '8', 'tracking value is still logged');
+assert.ok((await db.query(`select * from month_goal_stats($1, 1)`, [U7])).rows.every((r) => r.category !== 'custom_4'), 'no Gold Month for tracking');
+console.log('✓ goal slots: 5 required (Reading in chapters, Eating yes/no), optional tracking goal with no points');
+
 console.log('\nAll SQL tests passed.');

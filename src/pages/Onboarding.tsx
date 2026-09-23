@@ -20,14 +20,15 @@ const slides = (sex: Sex | null): Slide[] => [
   {
     eyebrow: 'Your 5 goals',
     title: 'Five goals, weighted points.',
-    body: <p>Every goal is scored each week (Mon–Sun). Hit your target and you get the full points. Your own random daily challenge adds 7 more (with a photo), up to 49 a week. <b>1,049 is a perfect week.</b></p>,
+    body: <p>Your five required goals are scored each week (Mon–Sun); an optional sixth is just for tracking. Hit your target and you get the full points. Your own random daily challenge adds 7 more (with a photo), up to 49 a week. <b>1,049 is a perfect week.</b></p>,
     visual: (
       <ul className="ob-goals">
         <li><ThemeIcon theme="gym" size={18} /><span>Workouts: each one 30+ min, with a photo or clip</span><b>300</b></li>
-        <li><ThemeIcon theme="refraining" size={18} /><span>Refraining: something you're giving up</span><b>200</b></li>
-        <li><ThemeIcon theme="reading" size={18} /><span>Custom goal 1</span><b>200</b></li>
-        <li><ThemeIcon theme="schedule" size={18} /><span>Custom goal 2</span><b>150</b></li>
-        <li><ThemeIcon theme="word" size={18} /><span>Custom goal 3</span><b>150</b></li>
+        <li><ThemeIcon theme="refraining" size={18} /><span>Refrain: something you're giving up</span><b>200</b></li>
+        <li><ThemeIcon theme="reading" size={18} /><span>Reading: chapters of a nonfiction book that helps your goals</span><b>200</b></li>
+        <li><ThemeIcon theme="nutrition" size={18} /><span>Eating: sticking to your chosen diet</span><b>150</b></li>
+        <li><ThemeIcon theme="word" size={18} /><span>Custom goal</span><b>150</b></li>
+        <li><ThemeIcon theme="other" size={18} /><span>Optional: one more, just for tracking</span><b>0</b></li>
         <li><Icon name="bolt" size={18} /><span>Daily challenge: random, just for you, photo required</span><b>+7</b></li>
       </ul>
     ),

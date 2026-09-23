@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { supabase, friendlyError } from '../lib/supabase';
 import {
-  CATEGORY_ORDER, CATEGORY_POINTS, CUSTOM_SUGGESTIONS, THEME_NAMES, defaultPrompt,
+  CATEGORY_POINTS, CUSTOM_SUGGESTIONS, DIETS, SCORED_CATEGORIES, THEME_NAMES, defaultPrompt, hasRequiredGoals,
 } from '../lib/goals';
 import type { Category, GoalType, Theme } from '../lib/types';
 import { ErrorText, TopBar } from '../components/ui';
@@ -28,24 +28,32 @@ const NO_STAKES = { red_week_punishment: '', gold_reward: '', three_gold_reward:
 const INITIAL: Record<Category, Draft> = {
   gym:        { category: 'gym', theme: 'gym', goal_type: 'percentage', label: '4 workouts / week (30+ min each)', target_value: 4, unit: 'workouts', prompt: '', promptEdited: false, ...NO_STAKES },
   refraining: { category: 'refraining', theme: 'refraining', goal_type: 'inverse', label: '', target_value: 7, unit: 'days', prompt: '', promptEdited: false, ...NO_STAKES },
-  custom_1:   { category: 'custom_1', ...CUSTOM_SUGGESTIONS[0], prompt: '', promptEdited: false, ...NO_STAKES },
-  custom_2:   { category: 'custom_2', ...CUSTOM_SUGGESTIONS[1], prompt: '', promptEdited: false, ...NO_STAKES },
-  custom_3:   { category: 'custom_3', ...CUSTOM_SUGGESTIONS[2], prompt: '', promptEdited: false, ...NO_STAKES },
+  custom_1:   { category: 'custom_1', theme: 'reading', goal_type: 'percentage', label: '7 chapters / week', target_value: 7, unit: 'chapters', prompt: '', promptEdited: false, ...NO_STAKES },
+  custom_2:   { category: 'custom_2', theme: 'nutrition', goal_type: 'binary', label: '', target_value: 6, unit: 'days', prompt: '', promptEdited: false, ...NO_STAKES },
+  custom_3:   { category: 'custom_3', ...CUSTOM_SUGGESTIONS[0], prompt: '', promptEdited: false, ...NO_STAKES },
+  custom_4:   { category: 'custom_4', ...CUSTOM_SUGGESTIONS[3], prompt: '', promptEdited: false, ...NO_STAKES },
 };
+
+// Reading's label carries the book: "7 chapters / week: Atomic Habits"
+const readingLabel = (n: number, book: string) => `${n} chapters / week${book.trim() ? `: ${book.trim()}` : ''}`;
+const bookOf = (label: string) => (label.includes(': ') ? label.slice(label.indexOf(': ') + 2) : '');
+const dietOf = (label: string) => label.replace(/^Follow my\s+/i, '').replace(/\s+diet$/i, '');
 
 /** Participants: goals + consequences for approval. Mentors (`mentor`): just goals, saved directly. */
 export default function ProposeGoals({ mentor = false }: { mentor?: boolean }) {
   const { goals, profile, refresh, signOut } = useAuth();
   const navigate = useNavigate();
   const [drafts, setDrafts] = useState<Record<Category, Draft>>(() => {
-    if (goals.length !== 5) return INITIAL;
+    if (!hasRequiredGoals(goals)) return INITIAL;
     // Re-editing a pending proposal
-    return Object.fromEntries(goals.map((g) => [g.category, {
+    return { ...INITIAL, ...Object.fromEntries(goals.map((g) => [g.category, {
       category: g.category, theme: g.theme, goal_type: g.goal_type, label: g.label,
       target_value: Number(g.target_value), unit: g.unit, prompt: g.prompt, promptEdited: true,
       red_week_punishment: g.red_week_punishment ?? '', gold_reward: g.gold_reward ?? '', three_gold_reward: g.three_gold_reward ?? '',
-    }])) as Record<Category, Draft>;
+    }])) } as Record<Category, Draft>;
   });
+  const [tracking, setTracking] = useState(() => goals.some((g) => g.category === 'custom_4'));
+  const [book, setBook] = useState(() => bookOf(goals.find((g) => g.category === 'custom_1')?.label ?? ''));
   const [ultra, setUltra] = useState({ ultra_punishment: '', ultra_wish: '' });
   // Re-editing: load the consequences submitted last time
   useEffect(() => {
@@ -63,18 +71,22 @@ export default function ProposeGoals({ mentor = false }: { mentor?: boolean }) {
 
   async function submit() {
     setError('');
-    for (const c of CATEGORY_ORDER) {
+    const cats: Category[] = [...SCORED_CATEGORIES, ...(tracking ? ['custom_4' as const] : [])];
+    const names: Record<string, string> = { refraining: 'Refrain', custom_1: 'Reading', custom_2: 'Eating', custom_3: 'Custom', custom_4: 'Tracking' };
+    for (const c of cats) {
       const d = drafts[c];
-      if (!d.label.trim()) return setError(`Give your ${c === 'refraining' ? 'refraining' : c.replace('_', ' ')} goal a name.`);
+      if (c === 'custom_1' && !book.trim()) return setError("Name the nonfiction book you're reading.");
+      if (c === 'custom_2' && !dietOf(d.label).trim()) return setError('Pick or type your diet.');
+      if (!d.label.trim()) return setError(`Give your ${names[c] ?? c} goal a name.`);
       if (!(d.target_value > 0)) return setError(`"${d.label}" needs a target above zero.`);
       if (c !== 'gym' && d.goal_type !== 'percentage' && d.target_value > 7) return setError(`"${d.label}": a week only has 7 days.`);
-      if (!mentor && (!d.red_week_punishment.trim() || !d.gold_reward.trim() || !d.three_gold_reward.trim())) {
-        return setError(`"${d.label || c}" needs its red-week punishment and both rewards.`);
+      if (!mentor && c !== 'custom_4' && (!d.red_week_punishment.trim() || !d.gold_reward.trim() || !d.three_gold_reward.trim())) {
+        return setError(`"${d.label || names[c]}" needs its red-week punishment and both rewards.`);
       }
     }
     if (!mentor && (!ultra.ultra_punishment.trim() || !ultra.ultra_wish.trim())) return setError('Add your Ultra Punishment and your one wish.');
     setBusy(true);
-    const payload = CATEGORY_ORDER.map((c) => {
+    const payload = cats.map((c) => {
       const d = drafts[c];
       return {
         category: c, theme: d.theme, goal_type: d.goal_type, label: d.label.trim(),
@@ -99,11 +111,11 @@ export default function ProposeGoals({ mentor = false }: { mentor?: boolean }) {
     <main className="screen">
       <TopBar pill={mentor ? 'Mentor' : 'Step 1 of 2'} />
       <section className="card">
-        <h1>{mentor ? 'Your goals' : 'Set your five goals'}</h1>
+        <h1>{mentor ? 'Your goals' : 'Set your goals'}</h1>
         <p className="muted">
           {mentor
             ? "Check in alongside your cohort. You're scored every week and shown on the board, but unranked: no place, no punishments, no rewards. You can change these any time."
-            : "Your mentor reviews these before you start, and may adjust targets. Every goal is scored weekly (Mon–Sun), and judged monthly for Gold Months. Write each goal's punishment and rewards with your coach."}
+            : "Five required goals (workouts, refrain, reading, eating and one custom), plus an optional one just for tracking. Your mentor reviews them before you start and may adjust targets. Each required goal is scored weekly (Mon–Sun) and judged monthly for Gold Months. Write each goal's punishment and rewards with your coach."}
         </p>
       </section>
 
@@ -122,7 +134,7 @@ export default function ProposeGoals({ mentor = false }: { mentor?: boolean }) {
       </section>
 
       <section className="card">
-        <GoalHead icon={<ThemeIcon theme="refraining" />} title="Refraining" points={CATEGORY_POINTS.refraining} />
+        <GoalHead icon={<ThemeIcon theme="refraining" />} title="Refrain" points={CATEGORY_POINTS.refraining} />
         <label className="field">
           <span>What are you giving up?</span>
           <input value={vice} placeholder="e.g. alcohol, porn, weed, sugar"
@@ -137,14 +149,60 @@ export default function ProposeGoals({ mentor = false }: { mentor?: boolean }) {
         {!mentor && <Stakes d={ref} onChange={(p) => update('refraining', p)} />}
       </section>
 
-      {(['custom_1', 'custom_2', 'custom_3'] as const).map((c, i) => (
-        <CustomGoal key={c} n={i + 1} d={drafts[c]} prompt={promptFor(drafts[c])} onChange={(p) => update(c, p)} stakes={!mentor} />
-      ))}
+      <section className="card">
+        <GoalHead icon={<ThemeIcon theme="reading" />} title="Reading" points={CATEGORY_POINTS.custom_1} />
+        <label className="field">
+          <span>Your nonfiction book (one that helps toward your goals)</span>
+          <input value={book} maxLength={80} placeholder="e.g. Atomic Habits"
+            onChange={(e) => { setBook(e.target.value); update('custom_1', { label: readingLabel(drafts.custom_1.target_value, e.target.value) }); }} />
+        </label>
+        <label className="field">
+          <span>Chapters per week</span>
+          <Stepper value={drafts.custom_1.target_value} min={1} max={50}
+            onChange={(n) => update('custom_1', { target_value: n, label: readingLabel(n, book) })} />
+        </label>
+        <p className="hint">Finish the book? Tell your mentor and keep going with the next one.</p>
+        <PromptPreview d={drafts.custom_1} prompt={promptFor(drafts.custom_1)} onEdit={(p) => update('custom_1', { prompt: p, promptEdited: true })} />
+        {!mentor && <Stakes d={drafts.custom_1} onChange={(p) => update('custom_1', p)} />}
+      </section>
+
+      <section className="card">
+        <GoalHead icon={<ThemeIcon theme="nutrition" />} title="Eating" points={CATEGORY_POINTS.custom_2} />
+        <div className="chips" role="radiogroup" aria-label="Your diet">
+          {DIETS.map((diet) => (
+            <button key={diet} type="button" role="radio" aria-checked={dietOf(drafts.custom_2.label) === diet}
+              className={`chip ${dietOf(drafts.custom_2.label) === diet ? 'on' : ''}`}
+              onClick={() => update('custom_2', { label: `Follow my ${diet} diet`, promptEdited: false })}>{diet}</button>
+          ))}
+        </div>
+        <label className="field">
+          <span>Your diet</span>
+          <input value={dietOf(drafts.custom_2.label)} maxLength={60} placeholder="Pick one above or type your own"
+            onChange={(e) => update('custom_2', { label: e.target.value ? `Follow my ${e.target.value} diet` : '', promptEdited: false })} />
+        </label>
+        <label className="field">
+          <span>Days per week on plan</span>
+          <Stepper value={drafts.custom_2.target_value} min={1} max={7} onChange={(n) => update('custom_2', { target_value: n })} />
+        </label>
+        <PromptPreview d={drafts.custom_2} prompt={promptFor(drafts.custom_2)} onEdit={(p) => update('custom_2', { prompt: p, promptEdited: true })} />
+        {!mentor && <Stakes d={drafts.custom_2} onChange={(p) => update('custom_2', p)} />}
+      </section>
+
+      <CustomGoal title="Custom goal" d={drafts.custom_3} prompt={promptFor(drafts.custom_3)} onChange={(p) => update('custom_3', p)} stakes={!mentor} />
+
+      {tracking ? (
+        <CustomGoal title="Tracking goal (optional)" d={drafts.custom_4} prompt={promptFor(drafts.custom_4)}
+          onChange={(p) => update('custom_4', p)} stakes={false}
+          note={<>Just for tracking: it's in your nightly check-in, but it's never scored and has no punishment or reward.{' '}
+            <button type="button" className="link" onClick={() => setTracking(false)}>Remove it</button></>} />
+      ) : (
+        <button type="button" className="btn block" onClick={() => setTracking(true)}>+ Add an optional tracking goal (no points)</button>
+      )}
 
       {!mentor && <section className="card">
         <GoalHead icon={<Icon name="crown" />} title="Your month-level stakes" points={0} />
         <p className="muted">
-          Each month is also judged across all five goals. 80%+ in every goal with no gray weeks is an
+          Each month is also judged across your five required goals. 80%+ in every goal with no gray weeks is an
           <b> Ultra Gold Month</b>; under 60% overall is an <b>Ultra Red Month</b>.
         </p>
         <label className="field">
@@ -172,12 +230,13 @@ export default function ProposeGoals({ mentor = false }: { mentor?: boolean }) {
   );
 }
 
-function CustomGoal({ n, d, prompt, onChange, stakes = true }: {
-  n: number; d: Draft; prompt: string; onChange: (p: Partial<Draft>) => void; stakes?: boolean;
+function CustomGoal({ title, d, prompt, onChange, stakes = true, note }: {
+  title: string; d: Draft; prompt: string; onChange: (p: Partial<Draft>) => void; stakes?: boolean; note?: ReactNode;
 }) {
   return (
     <section className="card">
-      <GoalHead icon={<ThemeIcon theme={d.theme} />} title={`Custom goal ${n}`} points={CATEGORY_POINTS[d.category]} />
+      <GoalHead icon={<ThemeIcon theme={d.theme} />} title={title} points={CATEGORY_POINTS[d.category]} />
+      {note && <p className="hint">{note}</p>}
       <div className="chips" role="radiogroup" aria-label="Goal area">
         {CUSTOM_SUGGESTIONS.map((s) => (
           <button key={s.theme} type="button" role="radio" aria-checked={d.theme === s.theme}

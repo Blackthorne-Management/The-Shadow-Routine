@@ -100,7 +100,7 @@ function PersonCard({ person, onDone }: { person: Person; onDone: () => void }) 
                 <span className="goal-icon sm"><ThemeIcon theme={g.theme} /></span>
                 <strong>{g.category === 'gym' ? 'Workouts (30+ min each)'
                   : g.category === 'refraining' ? THEME_NAMES[g.theme] : `${THEME_NAMES[g.theme]} (${g.category.replace('_', ' ')})`}</strong>
-                <span className="pill">{g.category_point_max}</span>
+                <span className="pill">{g.category_point_max > 0 ? g.category_point_max : 'Tracking'}</span>
               </div>
               <input aria-label="Label" value={g.label} onChange={(e) => edit(g.id, { label: e.target.value })} />
               <div className="row gap">

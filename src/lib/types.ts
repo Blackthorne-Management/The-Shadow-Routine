@@ -1,6 +1,7 @@
 export type Role = 'participant' | 'admin';
 export type UserStatus = 'pending_approval' | 'active' | 'removed';
-export type Category = 'gym' | 'refraining' | 'custom_1' | 'custom_2' | 'custom_3';
+/** gym · refraining · custom_1 Reading · custom_2 Eating · custom_3 Custom · custom_4 optional tracking (0 pts) */
+export type Category = 'gym' | 'refraining' | 'custom_1' | 'custom_2' | 'custom_3' | 'custom_4';
 export type GoalType = 'percentage' | 'binary' | 'inverse';
 export type Theme = 'gym' | 'refraining' | 'reading' | 'nutrition' | 'schedule' | 'word' | 'content' | 'other';
 export type Band = 'green' | 'gray' | 'red';

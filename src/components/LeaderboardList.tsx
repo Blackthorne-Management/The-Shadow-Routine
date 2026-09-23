@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { CATEGORY_ORDER } from '../lib/goals';
+import { SCORED_CATEGORIES } from '../lib/goals';
 import type { WeeklyScore } from '../lib/types';
 import { rankRows } from '../lib/ranking';
 import { titleFor } from '../lib/ranks';
@@ -91,7 +91,7 @@ export default function LeaderboardList({ week, meId, cohortId, cohortNames }: {
                 )}
               </div>
               <div className="board-dots">
-                {CATEGORY_ORDER.map((c) => <BandDot key={c} band={dots?.[c]} />)}
+                {SCORED_CATEGORIES.map((c) => <BandDot key={c} band={dots?.[c]} />)}
                 {r.bonus_points > 0 && <span className="bonus-chip"><Icon name="bolt" size={13} />{r.bonus_points}</span>}
               </div>
             </div>

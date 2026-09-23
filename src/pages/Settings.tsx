@@ -87,7 +87,7 @@ export default function Settings() {
                 <span className="goal-icon sm"><ThemeIcon theme={g.theme} /></span>
                 <div className="grow">
                   <strong>{g.label}</strong>
-                  <p className="small muted">{describeTarget(g)} · {g.category_point_max} pts</p>
+                  <p className="small muted">{describeTarget(g)} · {g.category_point_max > 0 ? `${g.category_point_max} pts` : 'tracking only, not scored'}</p>
                   {g.red_week_punishment && <p className="small muted">Red week: {g.red_week_punishment}</p>}
                   {g.gold_reward && <p className="small muted">Gold Month: {g.gold_reward}{g.three_gold_reward ? ` · 3 Gold: ${g.three_gold_reward}` : ''}</p>}
                 </div>

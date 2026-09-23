@@ -61,6 +61,10 @@ Rules that matter for fairness run **in Postgres**, not the browser:
   - Everyone gets their own random challenge each day (`ensure_bonus_challenge`). It avoids challenges the person had in the last 120 days, ones someone else already has that day, and yesterday's category.
   - It counts (7 pts, max 49/week) only with a photo or clip (`set_bonus_photo`; a trigger on `bonus_completions` enforces it).
   - Staff can reject a photo in **Admin → Bonus** (`review_bonus`). That removes the points and notifies the person; a new photo clears it. The library is edited there too.
+- **Goal slots** (`…25`, `…26_required_goal_slots.sql`): five required, scored goals plus one optional.
+  - Workouts 300 · Refrain 200 · **Reading** 200 (chapters per week of a nonfiction book that helps your goals; `custom_1`) · **Eating** 150 (yes/no on your chosen diet; `custom_2`) · Custom 150 (`custom_3`).
+  - Optional tracking goal (`custom_4`, 0 pts): it's in the nightly check-in but never gets points, a band, a punishment, a Gold Month or an Ultra result.
+  - `normalize_goal()` / `check_goal_set()` enforce the slots. A perfect week is still 1,049.
 - **Chat media** (`…23_chat_media.sql`). Messages can carry a photo, GIF (memes) or short video (≤ 60 s, ≤ 50 MB) in the private `chat` bucket at `<sender id>/<file>`, with or without text.
   - Photos are shrunk to 1600px before upload; GIFs keep their animation.
   - The storage read policy only allows a file if you can see the message it belongs to, so cohort, Global and DM visibility carry over to media.

@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './lib/auth';
+import { hasRequiredGoals } from './lib/goals';
 import { isConfigured } from './lib/supabase';
 import TabBar from './components/TabBar';
 import { Splash } from './components/ui';
@@ -50,7 +51,7 @@ export default function App() {
           <Route path="/admin/*" element={<Suspense fallback={<Splash />}><Admin /></Suspense>} />
           {/* A mentor who joined the cohort checks in like everyone else */}
           <Route path="/my-goals" element={<ProposeGoals mentor />} />
-          {profile.mentor_participates && goals.length === 5 && <>
+          {profile.mentor_participates && hasRequiredGoals(goals) && <>
             <Route path="/today" element={<Home />} />
             <Route path="/checkin" element={<CheckIn />} />
           </>}
@@ -63,7 +64,7 @@ export default function App() {
           <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/admin" replace />} />
         </Routes>
-        <TabBar admin mentorToday={profile.mentor_participates && goals.length === 5} />
+        <TabBar admin mentorToday={profile.mentor_participates && hasRequiredGoals(goals)} />
       </>
     );
   }
@@ -74,7 +75,7 @@ export default function App() {
   if (!profile.onboarded_at) return <Onboarding firstRun />;
 
   if (profile.status === 'pending_approval') {
-    const proposed = goals.length === 5;
+    const proposed = hasRequiredGoals(goals);
     return (
       <Routes>
         <Route path="/goals" element={<ProposeGoals />} />
