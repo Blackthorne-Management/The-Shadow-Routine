@@ -39,6 +39,9 @@ export interface ChatMessage {
   cohort_id: string | null;
   /** set for direct messages */
   recipient_id: string | null;
+  /** optional photo / GIF / short video in the private "chat" bucket */
+  media_path: string | null;
+  media_type: 'image' | 'gif' | 'video' | null;
   user_id: string;
   message_text: string;
   created_at: string;

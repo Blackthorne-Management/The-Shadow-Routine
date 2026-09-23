@@ -61,6 +61,9 @@ Rules that matter for fairness run **in Postgres**, not the browser:
   - Everyone gets their own random challenge each day (`ensure_bonus_challenge`). It avoids challenges the person had in the last 120 days, ones someone else already has that day, and yesterday's category.
   - It counts (7 pts, max 49/week) only with a photo or clip (`set_bonus_photo`; a trigger on `bonus_completions` enforces it).
   - Staff can reject a photo in **Admin → Bonus** (`review_bonus`). That removes the points and notifies the person; a new photo clears it. The library is edited there too.
+- **Chat media** (`…23_chat_media.sql`). Messages can carry a photo, GIF (memes) or short video (≤ 60 s, ≤ 50 MB) in the private `chat` bucket at `<sender id>/<file>`, with or without text.
+  - Photos are shrunk to 1600px before upload; GIFs keep their animation.
+  - The storage read policy only allows a file if you can see the message it belongs to, so cohort, Global and DM visibility carry over to media.
 - **Direct messages:** `messages` rows with `channel = 'dm'` and a `recipient_id`. The two people read them, Admins can read all, and Mentors can't read other people's. Anyone active can DM anyone in their cohort or any staff member (`can_dm`). Unread counts come from `dm_reads` / `my_dm_threads()`. The recipient gets a `direct_messages` notification. The DM screen tells people Admins can see DMs.
 - **Staff badges:** `admin_pending_counts()` gives goal submissions, no-photo workout asks, and proof to review. The counts show on the Admin/Mentor tab and on each section.
 - **Infractions:** a rejected proof logs #1 (a warning, and the participant sees a "talk to your mentor" notice). #2 surfaces a manual **Remove participant** button for the admin.

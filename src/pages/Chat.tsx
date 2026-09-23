@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { supabase, friendlyError } from '../lib/supabase';
@@ -9,6 +9,9 @@ import { DirectList, Who, loadPeople, type Person } from './DirectMessages';
 import { isStaff, staffLabel } from '../lib/roles';
 import { useViewCohorts } from '../lib/cohorts';
 import { useDmUnread } from '../lib/badges';
+import ChatComposer from '../components/ChatComposer';
+import { Bubble } from '../components/ChatMedia';
+import type { MediaType } from '../lib/chatMedia';
 
 
 /**
@@ -26,8 +29,6 @@ export default function Chat() {
   const unread = useDmUnread(profile?.id);
   const [messages, setMessages] = useState<ChatMessage[] | null>(null);
   const [members, setMembers] = useState<Map<string, Person>>(new Map());
-  const [text, setText] = useState('');
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -60,17 +61,14 @@ export default function Chat() {
 
   useEffect(() => { endRef.current?.scrollIntoView({ block: 'end' }); }, [messages?.length]);
 
-  async function send(e: FormEvent) {
-    e.preventDefault();
-    const body = text.trim();
-    if (!body || !profile || !cohort || channel === 'direct') return;
-    setBusy(true); setError('');
+  async function send(body: string, media: { path: string; type: MediaType } | null) {
+    if (!profile || !cohort || channel === 'direct') return null;
     const { data, error } = await supabase.from('messages')
-      .insert({ channel, cohort_id: channel === 'cohort' ? cohort : null, user_id: profile.id, message_text: body }).select().single();
-    setBusy(false);
-    if (error) return setError(friendlyError(error));
-    setText('');
+      .insert({ channel, cohort_id: channel === 'cohort' ? cohort : null, user_id: profile.id, message_text: body,
+                media_path: media?.path ?? null, media_type: media?.type ?? null }).select().single();
+    if (error) return friendlyError(error);
     setMessages((list) => (list?.some((x) => x.id === data.id) ? list : [...(list ?? []), data as ChatMessage]));
+    return null;
   }
 
   async function remove(m: ChatMessage) {
@@ -117,21 +115,18 @@ export default function Chat() {
                     <button className="link muted small chat-delete" onClick={() => remove(m)} aria-label="Delete message">Delete</button>
                   )}
                 </div>
-                <p className="chat-bubble">{m.message_text}</p>
+                <Bubble m={m} />
               </li>
             );
           })}
         </ul>
       )}
       <div ref={endRef} />
-      <form className="chat-compose" onSubmit={send}>
-        <ErrorText>{error}</ErrorText>
-        <div className="row gap">
-          <input className="grow" value={text} maxLength={1000} placeholder={channel === 'cohort' ? `Message ${cohortName ?? 'your cohort'}` : 'Message everyone (global)'}
-            onChange={(e) => setText(e.target.value)} aria-label="Message" />
-          <button className="btn primary" disabled={busy || !text.trim()}>Send</button>
-        </div>
-      </form>
+      <ErrorText>{error}</ErrorText>
+      {profile && (
+        <ChatComposer userId={profile.id} onSend={send}
+          placeholder={channel === 'cohort' ? `Message ${cohortName ?? 'your cohort'}` : 'Message everyone (global)'} />
+      )}
       </>}
     </main>
   );

@@ -717,3 +717,15 @@ h1 { font-weight: 600; letter-spacing: -0.025em; }
   .wordmark { letter-spacing: .28em; font-size: 13px; }
   .topbar .level { font-size: 9px; padding: 4px 6px; letter-spacing: .1em; }
 }
+
+/* ---------- chat media ---------- */
+.chat-media { display: block; max-width: min(260px, 100%); max-height: 320px; width: auto; border-radius: var(--r-md); background: var(--panel-2); }
+.chat-media.skeleton { width: 200px; height: 150px; }
+.chat-media-btn { padding: 0; border: 0; background: none; display: block; }
+.chat-bubble.has-media { padding: 4px; display: flex; flex-direction: column; gap: 6px; }
+.chat-bubble.has-media .chat-text { padding: 2px 10px 6px; }
+.compose-preview { display: flex; align-items: center; gap: 10px; padding: 6px; border: 1px solid var(--ink-line); border-radius: var(--r-md); }
+.compose-preview img, .compose-preview video { width: 56px; height: 56px; object-fit: cover; border-radius: var(--r-sm); }
+.icon-btn.attach { cursor: pointer; background: var(--panel-2); color: var(--on-panel); flex: none; }
+.lightbox { position: fixed; inset: 0; z-index: 50; background: rgba(0, 0, 0, .92); display: grid; place-items: center; padding: 16px; }
+.lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; }

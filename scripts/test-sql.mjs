@@ -458,6 +458,7 @@ console.log('✓ mentors: invite links, joining the cohort unranked, never punis
 // Row-level security only applies to a non-superuser, so these run as `authenticated`
 await db.exec(`grant usage on schema public to authenticated;
   grant select, insert, delete on public.messages to authenticated;
+  grant execute on function dm_preview(text, text) to authenticated;
   grant select on public.dm_reads to authenticated;
   grant select, insert, update, delete on public.invite_codes to authenticated;
   grant execute on function is_admin(), is_super_admin(), my_chat_cohort(), can_dm(uuid), mentors_cohort(uuid), staff_in_cohort(uuid), staff_can_see(uuid), default_cohort() to authenticated;
@@ -653,5 +654,19 @@ await as(ADMIN, `insert into messages (channel, cohort_id, user_id, message_text
 assert.equal((await one(`select title from notifications where user_id=$1 and type='cohort_messages' order by created_at desc limit 1`, [U1])).title,
   'Marishiten · Admin');
 console.log('✓ DMs across cohorts, staff label');
+
+// --- Photos / videos / GIFs in chat ---------------------------------------------------
+await asUser(U1, `insert into messages (channel, cohort_id, user_id, message_text, media_path, media_type)
+                  values ('cohort', $1, $2, '', $3, 'image')`, [defaultCohort, U1, `${U1}/pic.jpg`]);
+assert.equal((await one(`select body from notifications where type='cohort_messages' order by created_at desc limit 1`)).body, 'Sent a photo');
+await assert.rejects(asUser(U1, `insert into messages (channel, cohort_id, user_id, message_text) values ('cohort', $1, $2, '  ')`,
+  [defaultCohort, U1]), /messages_message_text_check/, 'an empty message needs media');
+await assert.rejects(asUser(U1, `insert into messages (channel, cohort_id, user_id, message_text, media_path, media_type)
+                  values ('cohort', $1, $2, 'x', $3, 'image')`, [defaultCohort, U1, `${U3}/theirs.jpg`]),
+  /messages_media_check/, "can't attach someone else's file");
+await asUser(U1, `insert into messages (channel, user_id, recipient_id, message_text, media_path, media_type)
+                  values ('dm', $1, $2, '', $3, 'video')`, [U1, U9, `${U1}/clip.mp4`]);
+assert.equal((await as(U9, `select last_text from my_dm_threads() where other_id=$1`, [U1])).rows[0].last_text, 'Video');
+console.log('✓ chat media: photo/video/GIF messages, previews, ownership');
 
 console.log('\nAll SQL tests passed.');

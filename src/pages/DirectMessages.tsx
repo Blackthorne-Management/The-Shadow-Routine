@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { supabase, friendlyError } from '../lib/supabase';
@@ -9,6 +9,9 @@ import { Empty, ErrorText } from '../components/ui';
 import Emblem from '../components/Emblem';
 import { Icon } from '../components/Icon';
 import { useCohorts } from '../lib/cohorts';
+import ChatComposer from '../components/ChatComposer';
+import { Bubble } from '../components/ChatMedia';
+import type { MediaType } from '../lib/chatMedia';
 
 export interface Person {
   id: string; display_name: string; role: string; is_super_admin: boolean; is_mentor: boolean;
@@ -130,8 +133,6 @@ export function DirectThread({ a, b, readOnly = false, back }: { a: string; b: s
   const { profile } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[] | null>(null);
   const [people, setPeople] = useState<Map<string, Person>>(new Map());
-  const [text, setText] = useState('');
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
   const admin = isSuperAdmin(profile);
@@ -163,17 +164,14 @@ export function DirectThread({ a, b, readOnly = false, back }: { a: string; b: s
 
   useEffect(() => { endRef.current?.scrollIntoView({ block: 'end' }); }, [messages?.length]);
 
-  async function send(e: FormEvent) {
-    e.preventDefault();
-    const body = text.trim();
-    if (!body || !profile) return;
-    setBusy(true); setError('');
+  async function send(body: string, media: { path: string; type: MediaType } | null) {
+    if (!profile) return null;
     const { data, error } = await supabase.from('messages')
-      .insert({ channel: 'dm', cohort_id: null, user_id: profile.id, recipient_id: b, message_text: body }).select().single();
-    setBusy(false);
-    if (error) return setError(friendlyError(error));
-    setText('');
+      .insert({ channel: 'dm', cohort_id: null, user_id: profile.id, recipient_id: b, message_text: body,
+                media_path: media?.path ?? null, media_type: media?.type ?? null }).select().single();
+    if (error) return friendlyError(error);
     setMessages((list) => (list?.some((x) => x.id === data.id) ? list : [...(list ?? []), data as ChatMessage]));
+    return null;
   }
 
   async function remove(m: ChatMessage) {
@@ -211,7 +209,7 @@ export function DirectThread({ a, b, readOnly = false, back }: { a: string; b: s
                   <span className="small muted">{timeAgo(m.created_at)}</span>
                   {canDelete && <button className="link muted small chat-delete" onClick={() => remove(m)} aria-label="Delete message">Delete</button>}
                 </div>
-                <p className="chat-bubble">{m.message_text}</p>
+                <Bubble m={m} />
               </li>
             );
           })}
@@ -219,15 +217,11 @@ export function DirectThread({ a, b, readOnly = false, back }: { a: string; b: s
       )}
       <div ref={endRef} />
       {!readOnly && (
-        <form className="chat-compose" onSubmit={send}>
+        <>
           <ErrorText>{error}</ErrorText>
-          <div className="row gap">
-            <input className="grow" value={text} maxLength={1000} placeholder={`Message ${pb?.display_name.split(' ')[0] ?? ''}`}
-              onChange={(e) => setText(e.target.value)} aria-label="Message" />
-            <button className="btn primary" disabled={busy || !text.trim()}>Send</button>
-          </div>
-          <p className="dm-note">Admins can see direct messages.</p>
-        </form>
+          <ChatComposer userId={profile!.id} onSend={send} note="Admins can see direct messages."
+            placeholder={`Message ${pb?.display_name.split(' ')[0] ?? ''}`} />
+        </>
       )}
       {readOnly && <ErrorText>{error}</ErrorText>}
     </>
