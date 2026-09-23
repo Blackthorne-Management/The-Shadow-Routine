@@ -140,6 +140,25 @@ Messages use the founder's wording from the original spec text.
 - **Me → Join the cohort** (mentors only): set goals and check in. Scored weekly and shown on the leaderboard marked Mentor, but unranked: no place, never "most consistent", no punishments/rewards/month results/ranks.
 - **Admin → Invites:** choose Participant or Mentor. A mentor code signs someone up as a mentor (full mentor tools), active immediately.
 
+## 16. Cohort names (logged 2026-09-23, for the multi-cohort build; not built yet)
+- Each cohort gets an old Japanese spiritual/god name instead of "Cohort 1". Shown in the header, chat ("Cohort · Marishiten"), leaderboard and admin.
+- The schema is ready: `cohorts.name` already exists. The work is naming at creation, a picker for Admins, and showing the name in the UI.
+- Name bank (pick in order, or let the Admin choose):
+  1. **Marishiten**: goddess of light and mirage, patron of warriors, said to move unseen (the "shadow" one)
+  2. **Fudō**: Fudō Myō-ō, the Immovable One; burns away weakness, holds a sword and rope (discipline)
+  3. **Hachiman**: god of warriors and archery
+  4. **Bishamonten**: armored guardian, god of warriors
+  5. **Raijin**: god of thunder
+  6. **Fūjin**: god of wind
+  7. **Susanoo**: god of storms and the sea, slayer of the eight-headed serpent
+  8. **Tsukuyomi**: god of the moon
+  9. **Amaterasu**: goddess of the sun
+  10. **Takemikazuchi**: god of thunder and the sword
+  11. **Ryūjin**: dragon god of the sea
+  12. **Kagutsuchi**: god of fire
+  13. **Izanagi / Izanami**: the creator pair (good for a founding or combined cohort)
+- Open question: rename the current "Cohort 1" now (e.g. to Marishiten), or only name new cohorts?
+
 ## 8. (Unclear) "We'll graph the punishments"
 - Means a chart of punishments over time? Or writing up the real punishment list? *(Possibly covered now by #6.)*
 
