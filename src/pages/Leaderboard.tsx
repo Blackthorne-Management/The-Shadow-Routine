@@ -49,7 +49,7 @@ export default function Leaderboard() {
           ? `Your cohort, ranked among itself. Global ranks everyone across all cohorts. `
           : 'Everyone across all cohorts. '}
         {period === 'week'
-          ? 'Ranked by points out of 1,049. Ties go to whoever has more green categories. Dots (gym · refraining · 3 customs) show pace this week, and final results once a week closes.'
+          ? 'Ranked by points out of 1,049. Ties go to whoever has more green categories. Dots (workouts · refrain · reading · eating · custom) show pace this week, and final results once a week closes.'
           : 'Overall adds up every program week (max 10,490), the same total that sets your rank title.'}
         {' '}Mentors who join in show here unranked.
       </p>

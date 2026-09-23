@@ -18,7 +18,8 @@ export default function Notifications() {
       .then(({ data }) => {
         setItems((data as AppNotification[]) ?? []);
         // Mark read after showing which ones were new
-        supabase.rpc('mark_notifications_read', { p_ids: null }).then();
+        supabase.rpc('mark_notifications_read', { p_ids: null })
+          .then(() => window.dispatchEvent(new Event('notifications-read')));
       });
   }, [profile]);
 

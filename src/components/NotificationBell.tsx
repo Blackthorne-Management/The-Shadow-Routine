@@ -19,10 +19,12 @@ export default function NotificationBell() {
   useEffect(() => {
     if (!profile) return;
     load();
-    const ch = supabase.channel(`bell-${profile.id}`)
+    const ch = supabase.channel(`bell-${profile.id}-${Math.random().toString(36).slice(2)}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${profile.id}` }, () => load())
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    // The inbox marks everything read; don't wait for Realtime to catch up
+    window.addEventListener('notifications-read', load);
+    return () => { window.removeEventListener('notifications-read', load); supabase.removeChannel(ch); };
   }, [profile, load]);
 
   if (!profile) return null;
