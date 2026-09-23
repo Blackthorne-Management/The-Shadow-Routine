@@ -37,7 +37,10 @@ const INITIAL: Record<Category, Draft> = {
 // Reading's label carries the book: "7 chapters / week: Atomic Habits"
 const readingLabel = (n: number, book: string) => `${n} chapters / week${book.trim() ? `: ${book.trim()}` : ''}`;
 const bookOf = (label: string) => (label.includes(': ') ? label.slice(label.indexOf(': ') + 2) : '');
-const dietOf = (label: string) => label.replace(/^Follow my\s+/i, '').replace(/\s+diet$/i, '');
+// "Follow my Keto diet" (from the list) or "Follow my diet: 2,200 calories" (custom)
+const dietOf = (label: string) => (label.startsWith('Follow my diet: ')
+  ? label.slice('Follow my diet: '.length)
+  : label.replace(/^Follow my\s+/i, '').replace(/\s+diet$/i, ''));
 
 /** Participants: goals + consequences for approval. Mentors (`mentor`): just goals, saved directly. */
 export default function ProposeGoals({ mentor = false }: { mentor?: boolean }) {
@@ -54,6 +57,11 @@ export default function ProposeGoals({ mentor = false }: { mentor?: boolean }) {
   });
   const [tracking, setTracking] = useState(() => goals.some((g) => g.category === 'custom_4'));
   const [book, setBook] = useState(() => bookOf(goals.find((g) => g.category === 'custom_1')?.label ?? ''));
+  // "Custom" diet: typed in, not one of the list
+  const [customDiet, setCustomDiet] = useState(() => {
+    const d = dietOf(goals.find((g) => g.category === 'custom_2')?.label ?? '');
+    return !!d && !DIETS.includes(d);
+  });
   const [ultra, setUltra] = useState({ ultra_punishment: '', ultra_wish: '' });
   // Re-editing: load the consequences submitted last time
   useEffect(() => {
@@ -169,17 +177,23 @@ export default function ProposeGoals({ mentor = false }: { mentor?: boolean }) {
       <section className="card">
         <GoalHead icon={<ThemeIcon theme="nutrition" />} title="Eating" points={CATEGORY_POINTS.custom_2} />
         <div className="chips" role="radiogroup" aria-label="Your diet">
-          {DIETS.map((diet) => (
-            <button key={diet} type="button" role="radio" aria-checked={dietOf(drafts.custom_2.label) === diet}
-              className={`chip ${dietOf(drafts.custom_2.label) === diet ? 'on' : ''}`}
-              onClick={() => update('custom_2', { label: `Follow my ${diet} diet`, promptEdited: false })}>{diet}</button>
-          ))}
+          {DIETS.map((diet) => {
+            const on = !customDiet && dietOf(drafts.custom_2.label) === diet;
+            return (
+              <button key={diet} type="button" role="radio" aria-checked={on} className={`chip ${on ? 'on' : ''}`}
+                onClick={() => { setCustomDiet(false); update('custom_2', { label: `Follow my ${diet} diet`, promptEdited: false }); }}>{diet}</button>
+            );
+          })}
+          <button type="button" role="radio" aria-checked={customDiet} className={`chip ${customDiet ? 'on' : ''}`}
+            onClick={() => { setCustomDiet(true); update('custom_2', { label: '', promptEdited: false }); }}>Custom</button>
         </div>
-        <label className="field">
-          <span>Your diet</span>
-          <input value={dietOf(drafts.custom_2.label)} maxLength={60} placeholder="Pick one above or type your own"
-            onChange={(e) => update('custom_2', { label: e.target.value ? `Follow my ${e.target.value} diet` : '', promptEdited: false })} />
-        </label>
+        {customDiet && (
+          <label className="field">
+            <span>Describe your diet</span>
+            <input autoFocus value={dietOf(drafts.custom_2.label)} maxLength={60} placeholder="e.g. 2,200 calories, no fried food"
+              onChange={(e) => update('custom_2', { label: e.target.value ? `Follow my diet: ${e.target.value}` : '', promptEdited: false })} />
+          </label>
+        )}
         <label className="field">
           <span>Days per week on plan</span>
           <Stepper value={drafts.custom_2.target_value} min={1} max={7} onChange={(n) => update('custom_2', { target_value: n })} />

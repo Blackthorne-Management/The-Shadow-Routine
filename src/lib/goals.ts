@@ -19,7 +19,7 @@ export const CATEGORY_NAMES: Record<Category, string> = {
 /** Diets to pick from for the Eating goal (or type your own). */
 export const DIETS = [
   'High protein', 'Calorie target', 'Keto', 'Low carb', 'Paleo', 'Mediterranean', 'Whole30',
-  'Intermittent fasting', 'Vegetarian', 'Vegan', 'Carnivore', 'No processed food',
+  'Intermittent fasting', 'Pescatarian', 'Vegetarian', 'Vegan', 'Carnivore', 'No processed food',
 ];
 
 export const THEME_NAMES: Record<Theme, string> = {
@@ -49,6 +49,7 @@ export function defaultPrompt(g: { category: Category; theme: Theme; goal_type: 
   }
   if (g.category === 'custom_1') return 'How many chapters did you read today?';
   if (g.category === 'custom_2') {
+    if (g.label.startsWith('Follow my diet: ')) return 'Did you stick to your diet today?';
     const diet = g.label.trim().replace(/^(follow|stick to|eat)\s+(my\s+)?/i, '').replace(/\s+diet$/i, '');
     return diet ? `Did you stick to your ${diet} diet today?` : 'Did you stick to your diet today?';
   }
