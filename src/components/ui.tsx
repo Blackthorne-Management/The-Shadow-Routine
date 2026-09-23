@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { useAuth } from '../lib/auth';
 import type { Band } from '../lib/types';
 import NotificationBell from './NotificationBell';
-import TempleScene from './TempleScene';
 
 export function Wordmark() {
   return <span className="wordmark">SHADOW<i className="sun" aria-hidden /></span>;
@@ -12,7 +11,6 @@ export function Wordmark() {
 export function TopBar({ pill, scene = false }: { pill?: ReactNode; scene?: boolean }) {
   return (
     <header className={`topbar ${scene ? 'scene' : ''}`}>
-      {scene && <TempleScene />}
       <Wordmark />
       <div className="row gap">
         {pill != null && <span className="level">{pill}</span>}

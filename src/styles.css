@@ -31,7 +31,7 @@
   --r-sm: 3px;
   --r-pill: 2px;
   --r-dot: 1px;
-  --sky: linear-gradient(#4b4b4a, #1e1e1e 55%, #000);
+  --scene: url('./assets/temple-dark.webp');
   --col: 460px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -614,15 +614,14 @@ h1 { font-weight: 600; letter-spacing: -0.025em; }
 .wordmark { font-size: 14px; font-weight: 600; letter-spacing: .42em; align-items: center; gap: 4px; }
 .wordmark .sun { width: 10px; height: 10px; border-radius: 50%; background: var(--lav); flex: none; }
 
-/* Top bar: no panel, just a hairline. With a scene: the temple on the cliffs, fading into mist. */
+/* Top bar: no panel, just a hairline. With a scene: the temple photo (dark/light per theme), fading into mist. */
 .topbar { color: var(--ink); background: transparent; border-radius: 0; padding: 14px 8px 16px; border-bottom: 1px solid var(--ink-line); }
 .topbar.scene {
   margin: calc(-12px - var(--safe-top)) -12px 0; padding: calc(var(--safe-top) + 16px) 20px 0;
   min-height: calc(var(--safe-top) + 250px); align-items: flex-start; border-bottom: 0; overflow: hidden;
-  background: var(--sky);
+  background: var(--paper) var(--scene) 74% 40% / cover no-repeat;
 }
-.topbar.scene > :not(.scene-art) { position: relative; z-index: 1; }
-.scene-art { position: absolute; left: 0; right: 0; bottom: 0; top: calc(var(--safe-top) + 40px); width: 100%; height: calc(100% - var(--safe-top) - 40px); }
+.topbar.scene > * { position: relative; z-index: 1; }
 .topbar.scene::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 110px; background: linear-gradient(rgba(0,0,0,0), var(--paper) 85%); }
 .topbar.scene + * { margin-top: -44px; position: relative; }
 
@@ -655,7 +654,7 @@ h1 { font-weight: 600; letter-spacing: -0.025em; }
   --r-sm: 12px;
   --r-pill: 999px;
   --r-dot: 50%;
-  --sky: linear-gradient(#9fa09d, #c9c6bf 70%, #ebe5d8);
+  --scene: url('./assets/temple-light.webp');
   --nav-space: calc(84px + var(--safe-bottom));
   color-scheme: light;
 }
@@ -674,3 +673,5 @@ h1 { font-weight: 600; letter-spacing: -0.025em; }
 :root[data-theme="light"] .tab { flex: none; padding: 12px 14px; border-radius: 999px; color: var(--on-panel); }
 :root[data-theme="light"] .tab.active { background: var(--lav); color: #fff; box-shadow: none; }
 @media (min-width: 600px) { :root[data-theme="light"] .tabbar { border-radius: 0 0 44px 44px; } }
+.topbar .bell { color: inherit; }
+.topbar.scene .bell { color: #fff; background: rgba(0, 0, 0, .38); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
