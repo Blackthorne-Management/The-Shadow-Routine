@@ -78,7 +78,7 @@ export default function Home() {
 
   return (
     <main className="screen with-tabs">
-      <TopBar pill={score?.consistency_rank ? `#${score.consistency_rank} rank` : formatDay(today.date, { weekday: 'short' })} />
+      <TopBar scene pill={score?.consistency_rank ? `#${score.consistency_rank} rank` : formatDay(today.date, { weekday: 'short' })} />
 
       <div className="linked">
         <section className="card">

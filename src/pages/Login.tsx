@@ -31,7 +31,7 @@ export default function Login() {
   return (
     <main className="screen">
       <div className="linked">
-        <TopBar pill="Pilot" />
+        <TopBar scene pill="Pilot" />
         <section className="card auth-hero">
         <h1>Most consistent<br />wins.</h1>
         <div className="row" style={{ gap: 48 }}>

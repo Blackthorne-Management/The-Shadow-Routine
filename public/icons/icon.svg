@@ -1,15 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <defs>
-    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#cbc5ff" stop-opacity="0.35"/>
-      <stop offset="100%" stop-color="#cbc5ff" stop-opacity="0"/>
-    </radialGradient>
-    <mask id="eclipse">
-      <rect width="512" height="512" fill="#fff"/>
-      <circle cx="292" cy="226" r="118" fill="#000"/>
-    </mask>
-  </defs>
-  <rect width="512" height="512" rx="112" fill="#042222"/>
-  <circle cx="256" cy="256" r="200" fill="url(#glow)"/>
-  <circle cx="256" cy="256" r="136" fill="#cbc5ff" mask="url(#eclipse)"/>
+  <rect width="512" height="512" rx="112" fill="#0c0c0e"/>
+  <g fill="#c3342b">
+    <path d="M64 128 Q256 96 448 128 L448 168 Q256 136 64 168Z"/>
+    <rect x="96" y="200" width="320" height="32"/>
+    <rect x="144" y="160" width="40" height="272"/>
+    <rect x="328" y="160" width="40" height="272"/>
+    <rect x="240" y="160" width="32" height="72"/>
+  </g>
 </svg>
