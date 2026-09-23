@@ -27,12 +27,16 @@ export interface Profile {
   onboarded_at: string | null;
   /** a mentor who checks in alongside the cohort (scored, unranked) */
   mentor_participates: boolean;
+  /** staff (role 'admin') with this flag are Admins; without it, Mentors */
+  is_super_admin: boolean;
 }
 
 export interface ChatMessage {
   id: string;
-  channel: 'cohort' | 'global';
+  channel: 'cohort' | 'global' | 'dm';
   cohort_id: string | null;
+  /** set for direct messages */
+  recipient_id: string | null;
   user_id: string;
   message_text: string;
   created_at: string;

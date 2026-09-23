@@ -51,7 +51,7 @@ await db.query(`insert into invite_codes (code) values ('FOUNDER'), ('ALPHA'), (
 assert.equal((await one(`select check_signup('alpha', 'nick')`)).check_signup, 'ok');
 assert.equal((await one(`select check_signup('nope', 'nick')`)).check_signup, 'invalid_code');
 await signup(ADMIN, 'FOUNDER', 'founder');
-await as(null, `update profiles set role='admin', status='active', activated_at=now() where id=$1`, [ADMIN]);
+await as(null, `update profiles set role='admin', is_super_admin=true, status='active', activated_at=now() where id=$1`, [ADMIN]);
 await signup(U1, 'alpha', 'nick');
 await assert.rejects(signup(U2, 'ALPHA', 'reuse'), /INVALID_INVITE_CODE/);
 await signup(U2, 'BRAVO', 'sam', 'America/Los_Angeles');
@@ -448,5 +448,59 @@ assert.equal((await one(`select target_value::int t from goals where user_id=$1 
 await as(M2, `select set_mentor_participation(false)`);
 assert.equal((await db.query(`select 1 from weekly_scores where user_id=$1 and week_start_date=$2`, [M2, wk])).rows.length, 0);
 console.log('✓ mentors: invite links, joining the cohort unranked, never punished');
+
+// --- Admins vs mentors, direct messages ---------------------------------------
+// Row-level security only applies to a non-superuser, so these run as `authenticated`
+await db.exec(`grant usage on schema public to authenticated;
+  grant select, insert, delete on public.messages to authenticated;
+  grant select on public.dm_reads to authenticated;
+  grant select, insert, update, delete on public.invite_codes to authenticated;
+  grant execute on function is_admin(), is_super_admin(), my_chat_cohort(), can_dm(uuid) to authenticated;`);
+const asUser = async (uid, sql, params) => {
+  await db.query(`select set_config('request.jwt.claim.sub', $1, false)`, [uid]);
+  await db.exec('set role authenticated');
+  try { return await db.query(sql, params); } finally { await db.exec('reset role'); }
+};
+assert.equal((await as(ADMIN, `select is_super_admin() v`)).rows[0].v, true);
+assert.equal((await as(M2, `select is_super_admin() v`)).rows[0].v, false, 'mentor-link signups are Mentors, not Admins');
+// Admin-only actions
+await assert.rejects(as(M2, `select admin_set_program_start(null)`), /ADMIN_ONLY/);
+await assert.rejects(as(M2, `select remove_participant($1)`, [U3]), /ADMIN_ONLY/);
+await assert.rejects(as(M2, `select admin_finalize_week('2026-08-24'::date)`), /ADMIN_ONLY/);
+await assert.rejects(asUser(M2, `insert into invite_codes (code, role) values ('MENTORX', 'mentor')`), /row-level security/);
+await asUser(M2, `insert into invite_codes (code, role) values ('PARTX', 'participant')`);
+await asUser(ADMIN, `insert into invite_codes (code, role) values ('MENTORY', 'mentor')`);
+// DMs: the pair and Admins read them; a Mentor can't read other people's
+await asUser(U1, `insert into messages (channel, user_id, recipient_id, message_text) values ('dm', $1, $2, 'hey charlie')`, [U1, U3]);
+await asUser(U3, `insert into messages (channel, user_id, recipient_id, message_text) values ('dm', $1, $2, 'hey nick')`, [U3, U1]);
+const dmCount = async (uid) => (await asUser(uid, `select count(*)::int n from messages where channel='dm'`)).rows[0].n;
+assert.equal(await dmCount(U1), 2);
+assert.equal(await dmCount(U3), 2);
+assert.equal(await dmCount(ADMIN), 2, 'Admins can read DMs');
+assert.equal(await dmCount(M2), 0, "Mentors can't read other people's DMs");
+await assert.rejects(asUser(U1, `insert into messages (channel, user_id, recipient_id, message_text) values ('dm', $1, $2, 'x')`, [U1, U2]),
+  /row-level security/, "can't DM a removed member");
+await assert.rejects(asUser(U1, `insert into messages (channel, user_id, recipient_id, message_text) values ('dm', $1, $2, 'spoof')`, [U3, U1]),
+  /row-level security/, "can't send as someone else");
+// A mentor can't delete a DM they can't see
+await asUser(M2, `delete from messages where channel='dm'`);
+assert.equal(await dmCount(ADMIN), 2);
+// Threads + unread
+let th = (await as(U1, `select * from my_dm_threads()`)).rows;
+assert.equal(th.length, 1); assert.equal(th[0].other_id, U3); assert.equal(th[0].unread, 1); assert.equal(th[0].last_text, 'hey nick');
+await as(U1, `select mark_dm_read($1)`, [U3]);
+th = (await as(U1, `select * from my_dm_threads()`)).rows;
+assert.equal(th[0].unread, 0);
+assert.equal((await as(ADMIN, `select * from admin_dm_threads()`)).rows[0].messages, 2);
+await assert.rejects(as(M2, `select * from admin_dm_threads()`), /ADMIN_ONLY/);
+// DM notification goes to the recipient only
+assert.equal((await one(`select count(*)::int n from notifications where type='direct_messages' and user_id=$1`, [U3])).n, 1);
+assert.equal((await one(`select url from notifications where type='direct_messages' and user_id=$1`, [U3])).url, `/chat/dm/${U1}`);
+assert.equal((await one(`select count(*)::int n from notifications where type='direct_messages' and user_id=$1`, [M2])).n, 0);
+// Pending counts for the admin badges
+const pc = (await as(M2, `select admin_pending_counts() c`)).rows[0].c;
+assert.deepEqual(Object.keys(pc).sort(), ['approvals', 'proofs', 'workouts']);
+await assert.rejects(as(U1, `select admin_pending_counts()`), /ADMIN_ONLY/);
+console.log('✓ admins vs mentors, direct messages, pending counts');
 
 console.log('\nAll SQL tests passed.');

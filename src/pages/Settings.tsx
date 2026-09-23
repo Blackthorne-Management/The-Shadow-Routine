@@ -10,6 +10,7 @@ import RankCard from '../components/RankCard';
 import Emblem from '../components/Emblem';
 import NotificationPrefs from '../components/NotificationPrefs';
 import AppearanceSettings from '../components/AppearanceSettings';
+import { staffLabel } from '../lib/roles';
 import MentorParticipation from '../components/MentorParticipation';
 
 export default function Settings() {
@@ -41,7 +42,7 @@ export default function Settings() {
         <section className="card profile-head">
           <div className="row gap">
             {profile.role === 'admin'
-              ? <span className="level">Mentor</span>
+              ? <span className="level">{staffLabel(profile)}</span>
               : <Emblem level={profile.rank_level} sex={profile.sex} size={44} />}
             <div>
               <h1>{profile.display_name}</h1>

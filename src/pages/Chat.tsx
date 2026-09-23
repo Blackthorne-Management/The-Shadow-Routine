@@ -3,36 +3,39 @@ import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { supabase, friendlyError } from '../lib/supabase';
 import { timeAgo } from '../lib/dates';
-import type { ChatMessage, Sex } from '../lib/types';
+import type { ChatMessage } from '../lib/types';
 import { Empty, ErrorText, TopBar } from '../components/ui';
-import Emblem from '../components/Emblem';
+import { DirectList, Who, loadPeople, type Person } from './DirectMessages';
+import { isStaff, staffLabel } from '../lib/roles';
+import { useDmUnread } from '../lib/badges';
 
-interface Member { id: string; display_name: string; role: string; sex: Sex | null; rank_level: number }
 
 /**
- * Chat with two channels: your cohort, and Everyone (all participants, for when
- * there are several cohorts). Text only, live via Realtime. The admin can post and delete.
+ * Chat: your cohort, Everyone (all participants, for when there are several
+ * cohorts), and Direct messages. Text only, live via Realtime. Staff can post
+ * anywhere and delete group messages.
  */
 export default function Chat() {
   const { profile } = useAuth();
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = isStaff(profile);
   const cohort = profile?.cohort_id ?? null;
   const [params, setParams] = useSearchParams();
-  const channel: 'cohort' | 'global' = params.get('c') === 'global' ? 'global' : 'cohort';
+  const tab = params.get('c');
+  const channel: 'cohort' | 'global' | 'direct' = tab === 'global' ? 'global' : tab === 'direct' ? 'direct' : 'cohort';
+  const unread = useDmUnread(profile?.id);
   const [messages, setMessages] = useState<ChatMessage[] | null>(null);
-  const [members, setMembers] = useState<Map<string, Member>>(new Map());
+  const [members, setMembers] = useState<Map<string, Person>>(new Map());
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
 
   const loadMembers = useCallback(async () => {
-    const { data } = await supabase.from('profiles').select('id,display_name,role,sex,rank_level');
-    setMembers(new Map(((data as Member[]) ?? []).map((m) => [m.id, m])));
+    setMembers(await loadPeople());
   }, []);
 
   useEffect(() => {
-    if (!cohort) return;
+    if (!cohort || channel === 'direct') return;
     setMessages(null);
     loadMembers();
     let q = supabase.from('messages').select('*').eq('channel', channel);
@@ -59,7 +62,7 @@ export default function Chat() {
   async function send(e: FormEvent) {
     e.preventDefault();
     const body = text.trim();
-    if (!body || !profile || !cohort) return;
+    if (!body || !profile || !cohort || channel === 'direct') return;
     setBusy(true); setError('');
     const { data, error } = await supabase.from('messages')
       .insert({ channel, cohort_id: channel === 'cohort' ? cohort : null, user_id: profile.id, message_text: body }).select().single();
@@ -78,11 +81,15 @@ export default function Chat() {
 
   return (
     <main className="screen with-tabs chat-screen">
-      <TopBar pill={isAdmin ? 'Mentor view' : 'Chat'} />
+      <TopBar pill={isAdmin ? `${staffLabel(profile)} view` : 'Chat'} />
       <div className="seg">
         <button className={channel === 'cohort' ? 'on' : ''} onClick={() => setParams({})}>Cohort</button>
         <button className={channel === 'global' ? 'on' : ''} onClick={() => setParams({ c: 'global' })}>Everyone</button>
+        <button className={channel === 'direct' ? 'on' : ''} onClick={() => setParams({ c: 'direct' })}>
+          Direct{unread > 0 && <> <span className="count-badge">{unread}</span></>}
+        </button>
       </div>
+      {channel === 'direct' ? <DirectList /> : <>
       {!messages ? <div className="skeleton-list" /> : messages.length === 0 ? (
         <Empty>{channel === 'cohort' ? 'No messages yet. Say something to your cohort.' : 'No messages yet. This channel reaches every participant.'}</Empty>
       ) : (
@@ -90,11 +97,11 @@ export default function Chat() {
           {messages.map((m) => {
             const who = members.get(m.user_id);
             const mine = m.user_id === profile?.id;
-            const mentor = who?.role === 'admin';
+            const mentor = isStaff(who);
             return (
               <li key={m.id} className={`chat-msg ${mine ? 'mine' : ''} ${mentor ? 'mentor' : ''}`}>
                 <div className="chat-meta">
-                  {mentor ? <span className="level">Mentor</span> : <Emblem level={who?.rank_level ?? 1} sex={who?.sex} size={20} />}
+                  <Who p={who} />
                   <strong>{mine ? 'You' : who?.display_name ?? '…'}</strong>
                   <span className="small muted">{timeAgo(m.created_at)}</span>
                   {isAdmin && (
@@ -116,6 +123,7 @@ export default function Chat() {
           <button className="btn primary" disabled={busy || !text.trim()}>Send</button>
         </div>
       </form>
+      </>}
     </main>
   );
 }

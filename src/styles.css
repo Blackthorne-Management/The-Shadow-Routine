@@ -675,3 +675,27 @@ h1 { font-weight: 600; letter-spacing: -0.025em; }
 @media (min-width: 600px) { :root[data-theme="light"] .tabbar { border-radius: 0 0 44px 44px; } }
 .topbar .bell { color: inherit; }
 .topbar.scene .bell { color: #fff; background: rgba(0, 0, 0, .38); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+
+/* ---------- badges (tab bar, admin sections, DM threads) ---------- */
+.tab { position: relative; }
+.tab-badge, .count-badge {
+  display: inline-grid; place-items: center; min-width: 17px; height: 17px; padding: 0 5px;
+  border-radius: 999px; background: var(--lav); color: #fff;
+  font-size: 10px; font-weight: 800; letter-spacing: 0; line-height: 1;
+}
+.tab-badge { position: absolute; top: 6px; right: calc(50% - 30px); }
+:root[data-theme="light"] .tab-badge { top: 2px; right: 0; }
+.tab.active .tab-badge { background: var(--ink); color: var(--paper); }
+:root[data-theme="light"] .tab.active .tab-badge { background: #fff; color: var(--lav); }
+.subnav a { display: inline-flex; align-items: center; gap: 6px; }
+.subnav a.on .count-badge { background: var(--paper); color: var(--ink); }
+.subnav a.has-pending { border-color: var(--lav); }
+
+/* ---------- direct messages ---------- */
+.dm-list .list-row { cursor: pointer; }
+.dm-preview { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dm-row.unread strong { font-weight: 700; }
+.dm-head { display: flex; align-items: center; gap: 10px; padding: 0 4px; }
+.dm-head h1 { font-size: 22px; flex: 1; min-width: 0; }
+.dm-note { font-size: 12px; color: var(--ink-muted); text-align: center; }
+.people-pick { max-height: 50vh; overflow-y: auto; }

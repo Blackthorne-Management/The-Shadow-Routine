@@ -3,6 +3,7 @@ import { useAuth } from '../../lib/auth';
 import { supabase, friendlyError } from '../../lib/supabase';
 import { addDays, formatWeek, localDate, weekStart } from '../../lib/dates';
 import type { UserStatus } from '../../lib/types';
+import { isSuperAdmin } from '../../lib/roles';
 import { Empty, ErrorText } from '../../components/ui';
 import { Icon } from '../../components/Icon';
 
@@ -15,6 +16,7 @@ interface DirRow {
 
 export default function People() {
   const { profile } = useAuth();
+  const admin = isSuperAdmin(profile);
   const [rows, setRows] = useState<DirRow[] | null>(null);
   const [error, setError] = useState('');
   const [msg, setMsg] = useState('');
@@ -72,8 +74,8 @@ export default function People() {
               {r.status === 'active' && r.infraction_count >= 2 && (
                 <div className="notice red">
                   <strong>Infraction #{r.infraction_count}: your call</strong>
-                  <p>Removal is manual. Talk to them first if you'd like.</p>
-                  <button className="btn small danger" onClick={() => remove(r)}>Remove participant</button>
+                  <p>Removal is manual. Talk to them first if you'd like.{admin ? '' : ' Only an Admin can remove someone.'}</p>
+                  {admin && <button className="btn small danger" onClick={() => remove(r)}>Remove participant</button>}
                 </div>
               )}
             </li>
@@ -81,7 +83,7 @@ export default function People() {
         })}
       </ul>
 
-      <section className="card stack">
+      {admin && <section className="card stack">
         <h2>Week close-out</h2>
         <p className="hint">
           Weeks finalize automatically Monday at 12:00 UTC. Use this if the scheduled job didn't run, or to test.
@@ -89,7 +91,7 @@ export default function People() {
         <ErrorText>{error}</ErrorText>
         {msg && <p className="success">{msg}</p>}
         <button className="btn block" onClick={finalize}>Finalize {formatWeek(lastWeek)}</button>
-      </section>
+      </section>}
     </>
   );
 }

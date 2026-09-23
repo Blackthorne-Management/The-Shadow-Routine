@@ -55,7 +55,7 @@ function ProofCard({ p, name, onDone }: { p: Punishment; name: string; onDone: (
     setBusy(true); setError('');
     const { error } = await supabase.rpc('review_proof', { p_punishment: p.id, p_accept: accept, p_note: note });
     setBusy(false);
-    if (error) setError(friendlyError(error)); else onDone();
+    if (error) setError(friendlyError(error)); else { window.dispatchEvent(new Event('pending-changed')); onDone(); }
   }
 
   const reviewable = p.proof_status === 'pending';

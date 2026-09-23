@@ -2,12 +2,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth';
 import { supabase, friendlyError } from '../../lib/supabase';
 import { timeAgo } from '../../lib/dates';
+import { isSuperAdmin } from '../../lib/roles';
 import { Empty, ErrorText } from '../../components/ui';
 
 interface Invite { id: string; code: string; role: 'participant' | 'mentor'; note: string | null; status: 'unused' | 'used'; used_by: string | null; created_at: string; used_at: string | null }
 
 export default function Invites() {
   const { profile } = useAuth();
+  const admin = isSuperAdmin(profile);
   const [invites, setInvites] = useState<Invite[] | null>(null);
   const [names, setNames] = useState<Map<string, string>>(new Map());
   const [note, setNote] = useState('');
@@ -53,11 +55,13 @@ export default function Invites() {
     <>
       <section className="card stack">
         <h2>New invite code</h2>
-        <div className="seg" role="radiogroup" aria-label="Invite as">
-          <button className={role === 'participant' ? 'on' : ''} onClick={() => setRole('participant')}>Participant</button>
-          <button className={role === 'mentor' ? 'on' : ''} onClick={() => setRole('mentor')}>Mentor</button>
-        </div>
-        {role === 'mentor' && <p className="hint">Mentors sign up with this link, skip goal approval, and get the same mentor tools you have.</p>}
+        {admin && (
+          <div className="seg" role="radiogroup" aria-label="Invite as">
+            <button className={role === 'participant' ? 'on' : ''} onClick={() => setRole('participant')}>Participant</button>
+            <button className={role === 'mentor' ? 'on' : ''} onClick={() => setRole('mentor')}>Mentor</button>
+          </div>
+        )}
+        {role === 'mentor' && <p className="hint">Mentors sign up with this link and skip goal approval. They can approve, review and invite participants, but can't read direct messages, change program dates or remove people.</p>}
         <div className="row gap">
           <input className="grow" placeholder="Who is it for? (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
           <button className="btn primary" onClick={generate}>Generate</button>
@@ -80,7 +84,7 @@ export default function Invites() {
               {i.status === 'unused' ? (
                 <>
                   <button className="btn small" onClick={() => share(i.code, i.role === 'mentor')}>{copied === i.code ? 'Copied' : 'Share'}</button>
-                  <button className="icon-btn small" aria-label="Delete code" onClick={() => revoke(i.id)}>✕</button>
+                  {(admin || i.role === 'participant') && <button className="icon-btn small" aria-label="Delete code" onClick={() => revoke(i.id)}>✕</button>}
                 </>
               ) : <span className="pill">Used</span>}
             </li>

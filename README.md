@@ -46,6 +46,11 @@ Rules that matter for fairness run **in Postgres**, not the browser:
 - **Mentors** (`…12_mentor_participation.sql`). Invite codes carry a role; a `mentor` code creates an active mentor (admin).
   - A mentor can switch on `mentor_participates` to set goals (`mentor_save_goals`, edited in place) and check in.
   - They're scored and shown on the board but unranked (`consistency_rank` null, never top), and are never punished.
+- **Admins vs Mentors** (`…13_admin_roles_dms.sql`). Staff are `role = 'admin'`; staff with `is_super_admin` are **Admins**, the rest are **Mentors**. The founder account is an Admin; anyone who joins with a mentor link is a Mentor.
+  - Both: approvals, workout and proof review, bonus, fallbacks, participant invites, chat moderation, and the pending-item badges.
+  - Admin only: reading anyone's direct messages (**Admin → DMs**), program dates and month close-outs (**Program**), finalizing a week, removing participants, and mentor invite links. Enforced in SQL (`is_super_admin()`), not just hidden in the UI.
+- **Direct messages:** `messages` rows with `channel = 'dm'` and a `recipient_id`. The two people read them, Admins can read all, and Mentors can't read other people's. Anyone active can DM anyone in their cohort or any staff member (`can_dm`). Unread counts come from `dm_reads` / `my_dm_threads()`. The recipient gets a `direct_messages` notification. The DM screen tells people Admins can see DMs.
+- **Staff badges:** `admin_pending_counts()` gives goal submissions, no-photo workout asks, and proof to review. The counts show on the Admin/Mentor tab and on each section.
 - **Infractions:** a rejected proof logs #1 (a warning, and the participant sees a "talk to your mentor" notice). #2 surfaces a manual **Remove participant** button for the admin.
 
 ## Setup

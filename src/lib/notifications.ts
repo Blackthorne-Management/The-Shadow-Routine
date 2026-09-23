@@ -11,6 +11,7 @@ export const PARTICIPANT_PREFS: PrefDef[] = [
   { key: 'punishments', label: 'Punishments', hint: 'A red week or an Ultra Punishment is issued', defaultOn: true },
   { key: 'proof_reviews', label: 'Proof reviews', hint: 'Your punishment proof is accepted or rejected', defaultOn: true },
   { key: 'rewards', label: 'Rewards', hint: 'Gold Months and other rewards you earn', defaultOn: true },
+  { key: 'direct_messages', label: 'Direct messages', hint: 'Someone messages you directly', defaultOn: true },
   { key: 'cohort_messages', label: 'Cohort chat', hint: 'New messages in your cohort', defaultOn: true },
   { key: 'global_messages', label: 'Everyone chat', hint: 'New messages from all participants', defaultOn: false },
 ];
@@ -19,6 +20,7 @@ export const ADMIN_PREFS: PrefDef[] = [
   { key: 'admin_goal_submissions', label: 'Goal submissions', hint: 'Someone submits goals for approval', defaultOn: true },
   { key: 'admin_exceptions', label: 'No-photo workouts', hint: 'Someone asks for a workout exception', defaultOn: true },
   { key: 'admin_proofs', label: 'Punishment proof', hint: 'Someone submits proof to review', defaultOn: true },
+  { key: 'direct_messages', label: 'Direct messages', hint: 'Someone messages you directly', defaultOn: true },
   { key: 'cohort_messages', label: 'Cohort chat', hint: 'New messages in any cohort', defaultOn: true },
   { key: 'global_messages', label: 'Everyone chat', hint: 'New messages in the all-participants channel', defaultOn: false },
 ];

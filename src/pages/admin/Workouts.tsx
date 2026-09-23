@@ -63,7 +63,7 @@ function WorkoutCard({ w, name, onDone }: { w: Workout; name: string; onDone: ()
     setBusy(true); setError('');
     const { error } = await supabase.rpc('review_workout', { p_id: w.id, p_accept: accept, p_note: note });
     setBusy(false);
-    if (error) setError(friendlyError(error)); else onDone();
+    if (error) setError(friendlyError(error)); else { window.dispatchEvent(new Event('pending-changed')); onDone(); }
   }
 
   return (

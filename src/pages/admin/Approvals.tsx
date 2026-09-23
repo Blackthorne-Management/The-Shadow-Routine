@@ -68,7 +68,7 @@ function PersonCard({ person, onDone }: { person: Person; onDone: () => void }) 
     }));
     const { error } = await supabase.rpc('approve_goals', { p_user: person.profile.id, p_goals: payload, p_consequences: stakes });
     setBusy(false);
-    if (error) setError(friendlyError(error)); else onDone();
+    if (error) setError(friendlyError(error)); else { window.dispatchEvent(new Event('pending-changed')); onDone(); }
   }
 
   return (
