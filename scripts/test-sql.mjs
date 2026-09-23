@@ -701,4 +701,20 @@ assert.equal((await one(`select value_reported v from daily_entries where goal_i
 assert.ok((await db.query(`select * from month_goal_stats($1, 1)`, [U7])).rows.every((r) => r.category !== 'custom_4'), 'no Gold Month for tracking');
 console.log('✓ goal slots: 5 required (Reading in chapters, Eating yes/no), optional tracking goal with no points');
 
+// --- Load: scoring is stamped and opening screens is throttled ---------------------------
+const wkNow = (await as(U1, `select refresh_current_week() w`)).rows[0].w;
+const stamp1 = (await one(`select computed_at from score_refresh where week_start=$1`, [wkNow])).computed_at;
+await as(U1, `select refresh_current_week()`);
+const stamp2 = (await one(`select computed_at from score_refresh where week_start=$1`, [wkNow])).computed_at;
+assert.equal(String(stamp1), String(stamp2), 'opening again within a minute does not re-score');
+await db.query(`update score_refresh set computed_at = now() - interval '2 minutes' where week_start=$1`, [wkNow]);
+await as(U1, `select refresh_current_week()`);
+assert.ok(new Date((await one(`select computed_at from score_refresh where week_start=$1`, [wkNow])).computed_at) > new Date(Date.now() - 60000),
+  'a stale week is re-scored');
+// Policies now read auth.uid() once per query
+assert.equal((await one(`select count(*)::int n from pg_policies where schemaname='public'
+  and (coalesce(qual,'') || coalesce(with_check,'')) like '%auth.uid()%'
+  and (coalesce(qual,'') || coalesce(with_check,'')) not ilike '%select auth.uid()%'`)).n, 0);
+console.log('✓ scale: throttled refresh, serialized scoring, per-query auth.uid()');
+
 console.log('\nAll SQL tests passed.');
