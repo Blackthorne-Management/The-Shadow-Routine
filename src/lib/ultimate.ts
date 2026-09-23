@@ -1,46 +1,44 @@
-// The Ultimate Shadow: cohorts compete in a bracket across the 10 program weeks.
+// The Ultimate Shadow: one bracket of every participant across all cohorts.
+// Cohorts stay the permanent group; the bracket is an eligibility overlay.
 //
-//   Cohort score = average weekly points per participant (mentors excluded),
-//   so a cohort's size doesn't matter. Ties: more green categories per
-//   participant-week, then name.
-//
-//   Round 1 (weeks 1–2)      all cohorts, top 8 move on
-//   Quarterfinals (3–4)      1v8, 2v7, 3v6, 4v5 (seeded by Round 1)
-//   Semifinals (5–6)         winner 1v8 vs winner 4v5, winner 2v7 vs winner 3v6
-//   The Final (7–10)         the last two; the winner is The Ultimate Shadow
-//
-// A round's slots fill in once the round before it is over. While a round is
-// live, whoever's ahead is marked "moving on if it ended now".
+//   Checkpoint win: a green week, i.e. 80%+ of the 1,049 weekly points.
+//   Ranking: most checkpoint wins; total points only break a tie. A late spike
+//   can't overtake someone who's been reliably green all along.
+//   Cuts: at the end of weeks 2, 4, 6, 7, 8, 9 and 10 the field halves, rounding
+//   up (25 → 13), and anyone exactly tied at the cut line stays. With 100
+//   people: 100 → 50 → 25 → 13 → 7 → 4 → 2 → 1.
+//   Mentors don't compete. Cut people keep their cohort; here they're tagged
+//   "eliminated in week X".
 
-export interface BracketCohort { id: string; name: string; emblem_url: string | null; created_at: string }
-export interface BracketWeek { user_id: string; week_start_date: string; total_points: number | string; band_per_category: Record<string, string | null> | null }
-export interface BracketMember { id: string; cohort_id: string | null; role: string; status: string }
+export const WEEK_MAX = 1049;
+export const GREEN_WEEK = 0.8 * WEEK_MAX;
+export const CUT_WEEKS = [2, 4, 6, 7, 8, 9, 10];
+export const PROGRAM_WEEKS = 10;
 
-export type RoundStatus = 'upcoming' | 'live' | 'done';
-export interface Score { score: number | null; greens: number }
-export interface Standing extends Score { cohort: BracketCohort; rank: number; advancing: boolean }
-export interface Match {
-  a: BracketCohort | null; b: BracketCohort | null;
-  aScore: Score | null; bScore: Score | null;
-  /** decided winner (round done), or the leader while live */
-  leader: string | null;
+export interface Contender { id: string; display_name: string; cohort_id: string | null; sex: 'male' | 'female' | null; rank_level: number }
+export interface ContenderWeek { user_id: string; week_start_date: string; total_points: number | string }
+
+export interface Standing {
+  person: Contender;
+  wins: number;
+  points: number;
+  /** per program week so far: 'win' | 'miss' | 'live' (current, not over yet) */
+  weeks: ('win' | 'miss' | 'live')[];
+  rank: number;
+  /** still in: safe above the next cut line, or below it if the cut were now */
+  safe: boolean;
+  eliminatedWeek: number | null;
 }
-export interface Round { key: 'r1' | 'qf' | 'sf' | 'final'; name: string; weeks: [number, number]; status: RoundStatus }
+export interface ScheduleWeek { week: number; cut: boolean; after: number; done: boolean }
 export interface Bracket {
-  currentWeek: number;              // program week (0 = before week 1, 11 = after week 10)
-  rounds: Round[];
-  r1: Standing[];
-  qf: Match[]; sf: Match[]; final: Match;
-  champion: BracketCohort | null;
+  currentWeek: number;           // 0 before week 1; 11 after week 10
+  inTheRunning: Standing[];      // ranked, still eligible
+  eliminated: Standing[];        // latest cut first
+  schedule: ScheduleWeek[];
+  nextCut: number | null;        // week of the next cut
+  keepAtNextCut: number | null;  // how many stay at the next cut
+  winner: Standing | null;
 }
-
-export const ROUNDS: Omit<Round, 'status'>[] = [
-  { key: 'r1', name: 'Round 1', weeks: [1, 2] },
-  { key: 'qf', name: 'Quarterfinals', weeks: [3, 4] },
-  { key: 'sf', name: 'Semifinals', weeks: [5, 6] },
-  { key: 'final', name: 'The Final', weeks: [7, 10] },
-];
-export const ADVANCE_FROM_R1 = 8;
 
 const DAY = 86_400_000;
 const addWeeks = (start: string, weeks: number) =>
@@ -48,67 +46,90 @@ const addWeeks = (start: string, weeks: number) =>
 
 export function programWeek(start: string, today: string) {
   const days = Math.floor((Date.parse(`${today}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / DAY);
-  return days < 0 ? 0 : Math.min(11, Math.floor(days / 7) + 1);
+  return days < 0 ? 0 : Math.min(PROGRAM_WEEKS + 1, Math.floor(days / 7) + 1);
 }
 
-const statusOf = (weeks: [number, number], current: number): RoundStatus =>
-  current < weeks[0] ? 'upcoming' : current > weeks[1] ? 'done' : 'live';
+export const keepCount = (n: number) => Math.ceil(n / 2);
 
-const better = (x: Score | null, y: Score | null) => {
-  const xs = x?.score ?? -1, ys = y?.score ?? -1;
-  return xs !== ys ? xs - ys : (x?.greens ?? 0) - (y?.greens ?? 0);
-};
-
-export function buildBracket(
-  cohorts: BracketCohort[], weeks: BracketWeek[], members: BracketMember[], start: string | null, today: string,
-): Bracket {
+export function buildBracket(people: Contender[], rows: ContenderWeek[], start: string | null, today: string): Bracket {
   const currentWeek = start ? programWeek(start, today) : 0;
-  const rounds: Round[] = ROUNDS.map((r) => ({ ...r, status: statusOf(r.weeks, currentWeek) }));
-  const cohortOf = new Map(members.filter((m) => m.role === 'participant' && m.status !== 'removed').map((m) => [m.id, m.cohort_id]));
-
-  // Average points per participant-week over program weeks [from, to], up to now
-  const score = (cohortId: string, [from, to]: [number, number]): Score => {
-    if (!start || currentWeek < from) return { score: null, greens: 0 };
-    const weekStarts = new Set<string>();
-    for (let w = from; w <= Math.min(to, currentWeek); w++) weekStarts.add(addWeeks(start, w - 1));
-    let pts = 0, greens = 0, n = 0;
-    for (const r of weeks) {
-      if (!weekStarts.has(r.week_start_date) || cohortOf.get(r.user_id) !== cohortId) continue;
-      pts += Number(r.total_points); n += 1;
-      greens += Object.values(r.band_per_category ?? {}).filter((b) => b === 'green').length;
+  // points[user][week]
+  const pts = new Map<string, number[]>();
+  if (start) {
+    const weekOf = new Map(Array.from({ length: PROGRAM_WEEKS }, (_, i) => [addWeeks(start, i), i + 1]));
+    for (const r of rows) {
+      const w = weekOf.get(r.week_start_date);
+      if (!w) continue;
+      const a = pts.get(r.user_id) ?? Array(PROGRAM_WEEKS + 1).fill(0);
+      a[w] = Number(r.total_points);
+      pts.set(r.user_id, a);
     }
-    return n ? { score: Math.round((pts / n) * 10) / 10, greens: greens / n } : { score: 0, greens: 0 };
+  }
+  const tally = (id: string, through: number) => {
+    const a = pts.get(id) ?? [];
+    let wins = 0, points = 0;
+    for (let w = 1; w <= through; w++) {
+      points += a[w] ?? 0;
+      if ((a[w] ?? 0) >= GREEN_WEEK) wins += 1;
+    }
+    return { wins, points };
+  };
+  const order = (through: number) => (x: Contender, y: Contender) => {
+    const a = tally(x.id, through), b = tally(y.id, through);
+    return b.wins - a.wins || b.points - a.points || x.display_name.localeCompare(y.display_name);
+  };
+  const tied = (x: Contender, y: Contender, through: number) => {
+    const a = tally(x.id, through), b = tally(y.id, through);
+    return a.wins === b.wins && a.points === b.points;
+  };
+  // Keep the top half (rounded up) plus anyone exactly tied with the last one kept
+  const cut = (field: Contender[], through: number) => {
+    const ranked = [...field].sort(order(through));
+    let keep = keepCount(ranked.length);
+    while (keep < ranked.length && tied(ranked[keep], ranked[keep - 1], through)) keep += 1;
+    return { kept: ranked.slice(0, keep), out: ranked.slice(keep) };
   };
 
-  const [r1Round, qfRound, sfRound, finalRound] = rounds;
-
-  // Round 1: everyone, ranked
-  const r1Scores = cohorts.map((c) => ({ cohort: c, ...score(c.id, r1Round.weeks) }));
-  r1Scores.sort((x, y) => better(y, x) || x.cohort.name.localeCompare(y.cohort.name));
-  const r1: Standing[] = r1Scores.map((s, i) => ({
-    ...s, rank: i + 1,
-    advancing: r1Round.status !== 'upcoming' && (cohorts.length <= ADVANCE_FROM_R1 || i < ADVANCE_FROM_R1),
-  }));
-
-  const play = (a: BracketCohort | null, b: BracketCohort | null, round: Round): Match => {
-    if (round.status === 'upcoming' || !a || !b) {
-      // A missing opponent is a bye: the other side moves on
-      return { a, b, aScore: null, bScore: null, leader: round.status !== 'upcoming' ? (a ?? b)?.id ?? null : null };
+  // Play out every cut that's already happened (its week is over)
+  let field = [...people];
+  const outAt = new Map<string, number>();
+  const schedule: ScheduleWeek[] = [];
+  let projected = people.length;
+  for (let w = 1; w <= PROGRAM_WEEKS; w++) {
+    const isCut = CUT_WEEKS.includes(w);
+    const done = currentWeek > w;
+    if (isCut && done && field.length > 1) {
+      const { kept, out } = cut(field, w);
+      out.forEach((p) => outAt.set(p.id, w));
+      field = kept;
+      projected = field.length;
+    } else if (isCut && !done && projected > 1) {
+      projected = keepCount(projected);
     }
-    const aScore = score(a.id, round.weeks), bScore = score(b.id, round.weeks);
-    const d = better(aScore, bScore) || b.name.localeCompare(a.name);
-    return { a, b, aScore, bScore, leader: d >= 0 ? a.id : b.id };
+    schedule.push({ week: w, cut: isCut, after: isCut && done ? field.length : projected, done });
+  }
+
+  const through = Math.min(currentWeek, PROGRAM_WEEKS);
+  const nextCut = CUT_WEEKS.find((w) => w >= currentWeek && currentWeek <= PROGRAM_WEEKS && field.length > 1) ?? null;
+  const keepAtNextCut = nextCut ? keepCount(field.length) : null;
+
+  const standing = (p: Contender, rank: number, safe: boolean): Standing => {
+    const { wins, points } = tally(p.id, through);
+    const a = pts.get(p.id) ?? [];
+    const last = outAt.get(p.id) ?? through;
+    const weeks = Array.from({ length: Math.min(last, through) }, (_, i) => {
+      const w = i + 1;
+      return w === currentWeek ? 'live' as const : (a[w] ?? 0) >= GREEN_WEEK ? 'win' as const : 'miss' as const;
+    });
+    return { person: p, wins, points: Math.round(points), weeks, rank, safe, eliminatedWeek: outAt.get(p.id) ?? null };
   };
-  const winner = (m: Match, round: Round) => (round.status === 'done' && m.leader
-    ? [m.a, m.b].find((c) => c?.id === m.leader) ?? null : null);
 
-  // Quarterfinals: seeds from Round 1, once it's over
-  const seeds: (BracketCohort | null)[] = r1Round.status === 'done'
-    ? Array.from({ length: ADVANCE_FROM_R1 }, (_, i) => r1[i]?.cohort ?? null)
-    : Array(ADVANCE_FROM_R1).fill(null);
-  const qf = [[0, 7], [3, 4], [1, 6], [2, 5]].map(([x, y]) => play(seeds[x], seeds[y], qfRound));
-  const sf = [[0, 1], [2, 3]].map(([x, y]) => play(winner(qf[x], qfRound), winner(qf[y], qfRound), sfRound));
-  const final = play(winner(sf[0], sfRound), winner(sf[1], sfRound), finalRound);
+  const ranked = [...field].sort(order(through));
+  const inTheRunning = ranked.map((p, i) => standing(p, i + 1, keepAtNextCut == null || i < keepAtNextCut));
+  const eliminated = people.filter((p) => outAt.has(p.id))
+    .sort((x, y) => outAt.get(y.id)! - outAt.get(x.id)! || order(outAt.get(x.id)!)(x, y))
+    .map((p) => standing(p, 0, false));
+  const winner = field.length === 1 && outAt.size > 0 ? inTheRunning[0] : null;
 
-  return { currentWeek, rounds, r1, qf, sf, final, champion: winner(final, finalRound) };
+  return { currentWeek, inTheRunning, eliminated, schedule, nextCut, keepAtNextCut, winner };
 }

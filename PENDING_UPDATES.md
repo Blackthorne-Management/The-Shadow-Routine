@@ -159,12 +159,12 @@ Messages use the founder's wording from the original spec text.
   13. **Izanagi / Izanami**: the creator pair (good for a founding or combined cohort)
 - Done 2026-09-23: "Cohort 1" is renamed **Marishiten**, and the name shows on the chat tab, the message box and chat notifications. Still to build: naming new cohorts (part of the multi-cohort build).
 
-## 17. The Ultimate Shadow (built 2026-09-23)
-- A bracket of all cohorts on the Board ("The Ultimate Shadow" button).
-- No earlier rules were on record, so this default format was used (easy to change in `src/lib/ultimate.ts`):
-  - Score = average weekly points per member.
-  - Round 1 (weeks 1–2), top 8 of 10 move on. Quarterfinals (3–4), 1v8 / 2v7 / 3v6 / 4v5. Semifinals (5–6). Final (7–10).
-- Test data: 8 more cohorts (Hachiman, Bishamonten, Raijin, Fūjin, Susanoo, Tsukuyomi, Amaterasu, Takemikazuchi), each with one test member (Kenji, Mika, Taro, Yumi, Ren, Aiko, Haru, Sora). They have no password, so nobody can sign in as them.
+## 17. The Ultimate Shadow (built 2026-09-23; switched to individual brackets the same day)
+- A bracket of every participant ("The Ultimate Shadow" button on the Board). Cohorts stay permanent; the bracket is an eligibility overlay.
+- Checkpoint win = a green week (80%+ of 1,049). Rank by wins; points break ties.
+- Halving cuts (rounded up) at the end of weeks 2, 4, 6, 7, 8, 9 and 10: 100 → 50 → 25 → 13 → 7 → 4 → 2 → 1. Weeks 1, 3 and 5 are breathing weeks.
+- Cut people are tagged "eliminated in week X" in the bracket; their cohort view is unchanged.
+- Test data: 8 more cohorts (Hachiman, Bishamonten, Raijin, Fūjin, Susanoo, Tsukuyomi, Amaterasu, Takemikazuchi), each with one test member. They have no password, so nobody can sign in as them.
 - Cohort emblem art is still to come (`cohorts.emblem_url`).
 
 ## 8. (Unclear) "We'll graph the punishments"

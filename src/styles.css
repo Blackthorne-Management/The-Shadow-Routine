@@ -751,24 +751,36 @@ h1 { font-weight: 600; letter-spacing: -0.025em; }
 .ult-round-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; padding: 0 4px; }
 .ult-round-head h2 { font-size: 15px; }
 .ult-round-head .pill { margin-left: auto; }
-.ult-grid.two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.ult-match { border: 1px solid var(--ink-line); border-radius: var(--r-md); overflow: hidden; background: var(--panel); color: var(--on-panel); }
-.ult-side { display: flex; align-items: center; gap: 8px; padding: 8px 10px; font-size: 13px; }
-.ult-side + .ult-side { border-top: 1px solid var(--panel-line); }
-.ult-side.lead { box-shadow: inset 3px 0 0 var(--lav); font-weight: 700; }
-.ult-side.out { opacity: .45; }
-.ult-side.mine .ult-name { text-decoration: underline; text-underline-offset: 3px; }
-.ult-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.ult-score { font-variant-numeric: tabular-nums; font-weight: 600; }
-.ult-field { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-.ult-tile {
-  position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 2px 8px;
-  border: 1px solid var(--ink-line); border-radius: var(--r-md); background: var(--panel); color: var(--on-panel); text-align: center;
+.ult-schedule { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; }
+.ult-schedule li {
+  display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 0;
+  border: 1px solid var(--ink-line); border-radius: var(--r-sm); background: var(--panel); color: var(--on-panel);
+  font-variant-numeric: tabular-nums;
 }
-.ult-tile.advancing { border-color: var(--lav); box-shadow: inset 0 2px 0 var(--lav); }
-.ult-tile.out { opacity: .45; }
-.ult-tile.mine { outline: 2px solid var(--gold); outline-offset: 1px; }
-.ult-rank { position: absolute; top: 3px; left: 5px; font-size: 10px; color: var(--on-panel-muted); }
-.ult-tile-name { font-size: 10px; font-weight: 600; line-height: 1.15; max-width: 100%; overflow-wrap: anywhere; }
-.ult-tile .ult-score { font-size: 12px; }
-@media (max-width: 360px) { .ult-grid.two { grid-template-columns: 1fr; } }
+.ult-schedule li strong { font-size: 13px; }
+.ult-schedule li .small { font-size: 10px; color: var(--on-panel-muted); }
+.ult-schedule .tiny { font-size: 8px; letter-spacing: .08em; text-transform: uppercase; color: var(--on-panel-muted); }
+.ult-schedule li.cut { border-color: var(--lav); }
+.ult-schedule li.cut .tiny { color: var(--lav); }
+.ult-schedule li.done { opacity: .55; }
+.ult-schedule li.now { outline: 2px solid var(--gold); outline-offset: 1px; opacity: 1; }
+.ult-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.ult-row {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  border: 1px solid var(--ink-line); border-radius: var(--r-md); background: var(--panel); color: var(--on-panel);
+}
+.ult-row.me { outline: 2px solid var(--gold); outline-offset: 1px; }
+.ult-row.out { opacity: .6; }
+.ult-pos { width: 22px; font-size: 16px; font-weight: 300; color: var(--on-panel-muted); font-variant-numeric: tabular-nums; flex: none; }
+.ult-who { display: flex; align-items: center; gap: 6px; }
+.ult-who strong { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ult-sub { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-top: 2px; }
+.ult-tag { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--lav); }
+.ult-weeks { display: flex; gap: 3px; margin-top: 5px; }
+.ult-weeks i { width: 9px; height: 9px; border-radius: var(--r-dot); background: var(--panel-2); }
+.ult-weeks i.win { background: var(--mint); }
+.ult-weeks i.live { box-shadow: inset 0 0 0 1.5px var(--on-panel-muted); background: transparent; }
+.ult-tally { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; flex: none; }
+.ult-tally strong { font-size: 22px; font-weight: 300; }
+.ult-cutline { display: flex; align-items: center; gap: 8px; color: var(--lav); font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.ult-cutline::before, .ult-cutline::after { content: ""; flex: 1; height: 1px; background: var(--lav); }

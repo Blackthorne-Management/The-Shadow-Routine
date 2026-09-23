@@ -64,9 +64,10 @@ Rules that matter for fairness run **in Postgres**, not the browser:
 - **Chat media** (`…23_chat_media.sql`). Messages can carry a photo, GIF (memes) or short video (≤ 60 s, ≤ 50 MB) in the private `chat` bucket at `<sender id>/<file>`, with or without text.
   - Photos are shrunk to 1600px before upload; GIFs keep their animation.
   - The storage read policy only allows a file if you can see the message it belongs to, so cohort, Global and DM visibility carry over to media.
-- **The Ultimate Shadow** (`src/lib/ultimate.ts`, `/ultimate`, button on the Board). All cohorts compete in a bracket over the 10 program weeks. It's computed on read from `weekly_scores`, so it updates live; `npm run test:bracket` checks the logic.
-  - A cohort's score is the average weekly points per participant in the round (mentors excluded). Ties go to more green categories.
-  - Round 1 (weeks 1–2): all cohorts, top 8 move on. Quarterfinals (3–4): 1v8, 4v5, 2v7, 3v6. Semifinals (5–6). Final (7–10); the winner is The Ultimate Shadow.
+- **The Ultimate Shadow** (`src/lib/ultimate.ts`, `/ultimate`, button on the Board). One bracket of every participant across all cohorts, as an overlay: cohorts never change. It's computed on read from `weekly_scores`, so it updates live; `npm run test:bracket` checks the logic.
+  - A checkpoint win is a green week (839+ of 1,049). People are ranked by wins; total points only break ties.
+  - Cuts at the end of weeks 2, 4, 6, 7, 8, 9 and 10 keep the top half, rounded up. Anyone exactly tied at the line stays. With 100 people: 100 → 50 → 25 → 13 → 7 → 4 → 2 → 1.
+  - Mentors don't compete. Cut people are tagged "eliminated in week X".
   - `cohorts.emblem_url` holds cohort art; until it's set, a placeholder seal with the initial is shown.
 - **Direct messages:** `messages` rows with `channel = 'dm'` and a `recipient_id`. The two people read them, Admins can read all, and Mentors can't read other people's. Anyone active can DM anyone in their cohort or any staff member (`can_dm`). Unread counts come from `dm_reads` / `my_dm_threads()`. The recipient gets a `direct_messages` notification. The DM screen tells people Admins can see DMs.
 - **Staff badges:** `admin_pending_counts()` gives goal submissions, no-photo workout asks, and proof to review. The counts show on the Admin/Mentor tab and on each section.
