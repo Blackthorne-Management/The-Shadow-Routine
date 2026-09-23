@@ -77,6 +77,13 @@ Rules that matter for fairness run **in Postgres**, not the browser:
 - **Staff badges:** `admin_pending_counts()` gives goal submissions, no-photo workout asks, and proof to review. The counts show on the Admin/Mentor tab and on each section.
 - **Infractions:** a rejected proof logs #1 (a warning, and the participant sees a "talk to your mentor" notice). #2 surfaces a manual **Remove participant** button for the admin.
 
+## Scale & security
+
+- **Load:** weekly scoring runs one at a time per week (advisory lock). Opening Today/Board only re-scores if the week is over a minute old (`score_refresh`). RLS reads `auth.uid()` once per query, and foreign keys are indexed (`…28_scale_hardening.sql`). Realtime reloads are batched and jittered (`src/lib/burst.ts`). Screens load on demand, and React and Supabase ship as separately cached files.
+- **Load test:** `scripts/load-test.mjs` simulates an evening rush (sign in, open Today, check in, open the board, chat, plus a live board subscription) and reports p50/p95/max and errors. Run it against a Supabase branch, never production.
+- **Security:** see [SECURITY.md](SECURITY.md). Headers live in `netlify.toml`. CI is in `.github/workflows/ci.yml`, and Dependabot in `.github/dependabot.yml`.
+- **Launch cleanup:** `supabase/sql/cleanup_test_data.sql` removes the test accounts and cohorts. It previews by default and ends in `rollback;`.
+
 ## Setup
 
 ### 1. Supabase

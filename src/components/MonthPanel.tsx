@@ -5,8 +5,8 @@ import type { MonthStatus, MonthlyResult, Reward } from '../lib/types';
 import { Icon } from './Icon';
 
 // Month 1 includes the two prep weeks, so "Week 3 of 4" there is program week 1
-const weekLabel = (m: number, w: number) =>
-  m !== 1 ? `Week ${w} of 4` : w <= 2 ? `Prep week ${w}` : `Prep done · week ${w - 2} of 2`;
+const weekLabel = (m: number, w: number | null | undefined) =>
+  w == null ? `Week – of 4` : m !== 1 ? `Week ${w} of 4` : w <= 2 ? `Prep week ${w}` : `Prep done · week ${w - 2} of 2`;
 
 /** "Month 2 · Week 3 of 4": Gold Month progress per goal, rewards, past months. */
 export default function MonthPanel({ month, rewards, results, onChange }: {
