@@ -8,12 +8,12 @@ export function Wordmark() {
 }
 
 /** The header: wordmark and an optional red pill. `scene` adds the temple-on-the-cliffs art. */
-export function TopBar({ pill, scene = false }: { pill?: ReactNode; scene?: boolean }) {
+export function TopBar({ pill, pills, scene = false }: { pill?: ReactNode; pills?: ReactNode[]; scene?: boolean }) {
   return (
     <header className={`topbar ${scene ? 'scene' : ''}`}>
       <Wordmark />
       <div className="row gap">
-        {pill != null && <span className="level">{pill}</span>}
+        {[pill, ...(pills ?? [])].filter((p) => p != null).map((p, i) => <span key={i} className="level">{p}</span>)}
         <NotificationBell />
       </div>
     </header>

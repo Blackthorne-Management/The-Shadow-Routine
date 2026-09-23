@@ -19,7 +19,7 @@ export default function Chat() {
   const { profile } = useAuth();
   const isAdmin = isStaff(profile);
   // Staff can read every cohort they mentor (Admins: all); they pick which one
-  const { choices: chatCohorts, current: cohort, setPick, name: cohortName } = useViewCohorts(profile);
+  const { choices: chatCohorts, current: cohort, setPick, name: cohortName, names: cohortNames } = useViewCohorts(profile);
   const [params, setParams] = useSearchParams();
   const tab = params.get('c');
   const channel: 'cohort' | 'global' | 'direct' = tab === 'global' ? 'global' : tab === 'direct' ? 'direct' : 'cohort';
@@ -109,6 +109,9 @@ export default function Chat() {
                 <div className="chat-meta">
                   <Who p={who} />
                   <strong>{mine ? 'You' : who?.display_name ?? '…'}</strong>
+                  {channel === 'global' && who?.cohort_id && cohortNames.get(who.cohort_id) && (
+                    <span className="small muted">{cohortNames.get(who.cohort_id)}</span>
+                  )}
                   <span className="small muted">{timeAgo(m.created_at)}</span>
                   {isAdmin && (
                     <button className="link muted small chat-delete" onClick={() => remove(m)} aria-label="Delete message">Delete</button>

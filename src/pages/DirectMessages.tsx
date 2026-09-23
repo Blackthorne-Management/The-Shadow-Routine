@@ -8,14 +8,15 @@ import type { ChatMessage, Sex } from '../lib/types';
 import { Empty, ErrorText } from '../components/ui';
 import Emblem from '../components/Emblem';
 import { Icon } from '../components/Icon';
+import { useCohorts } from '../lib/cohorts';
 
 export interface Person {
-  id: string; display_name: string; role: string; is_super_admin: boolean;
+  id: string; display_name: string; role: string; is_super_admin: boolean; is_mentor: boolean;
   status: string; sex: Sex | null; rank_level: number; cohort_id: string | null;
 }
 interface Thread { other_id: string; last_text: string; last_at: string; last_from_me: boolean; unread: number }
 
-const PEOPLE = 'id,display_name,role,is_super_admin,status,sex,rank_level,cohort_id';
+const PEOPLE = 'id,display_name,role,is_super_admin,is_mentor,status,sex,rank_level,cohort_id';
 export async function loadPeople(): Promise<Map<string, Person>> {
   const { data } = await supabase.from('profiles').select(PEOPLE);
   return new Map(((data as Person[]) ?? []).map((p) => [p.id, p]));
@@ -35,6 +36,8 @@ export function DirectList() {
   const [threads, setThreads] = useState<Thread[] | null>(null);
   const [people, setPeople] = useState<Map<string, Person>>(new Map());
   const [picking, setPicking] = useState(false);
+  const { cohorts, mentorsOf } = useCohorts();
+  const cohortName = (id: string | null) => cohorts?.find((c) => c.id === id)?.name ?? null;
 
   const load = useCallback(async () => {
     const [{ data }, map] = await Promise.all([supabase.rpc('my_dm_threads'), loadPeople()]);
@@ -52,11 +55,24 @@ export function DirectList() {
   }, [profile, load]);
 
   if (!profile) return null;
-  // Same rule as the database (can_dm): active, and same cohort unless either is staff
-  const reachable = [...people.values()]
-    .filter((p) => p.id !== profile.id && p.status === 'active'
-      && (isStaff(profile) || isStaff(p) || p.cohort_id === profile.cohort_id))
-    .sort((a, b) => Number(isStaff(b)) - Number(isStaff(a)) || a.display_name.localeCompare(b.display_name));
+  // Anyone active, in any cohort. Your cohort (and its mentors) first, then everyone else A–Z.
+  const byName = (a: Person, b: Person) => a.display_name.localeCompare(b.display_name);
+  const myMentors = new Set(profile.cohort_id ? mentorsOf(profile.cohort_id) : []);
+  const everyone = [...people.values()].filter((p) => p.id !== profile.id && p.status === 'active');
+  const mine = everyone.filter((p) => p.cohort_id === profile.cohort_id || myMentors.has(p.id)).sort(byName);
+  const others = everyone.filter((p) => !mine.includes(p)).sort(byName);
+  const pickRow = (p: Person) => (
+    <li key={p.id}>
+      <button className="list-row block" style={{ textAlign: 'left' }} onClick={() => navigate(`/chat/dm/${p.id}`)}>
+        <Who p={p} size={24} />
+        <div className="grow">
+          <strong>{p.display_name}</strong>
+          {cohortName(p.cohort_id) && <p className="small muted">{cohortName(p.cohort_id)}</p>}
+        </div>
+        <span aria-hidden>›</span>
+      </button>
+    </li>
+  );
 
   return (
     <>
@@ -64,21 +80,20 @@ export function DirectList() {
         {picking ? 'Cancel' : <><Icon name="chat" size={16} /> New message</>}
       </button>
       {picking && (
-        <ul className="list people-pick">
-          {reachable.map((p) => (
-            <li key={p.id}>
-              <button className="list-row block" style={{ textAlign: 'left' }} onClick={() => navigate(`/chat/dm/${p.id}`)}>
-                <Who p={p} size={24} />
-                <strong className="grow">{p.display_name}</strong>
-                <span aria-hidden>›</span>
-              </button>
-            </li>
-          ))}
-          {reachable.length === 0 && <Empty>No one to message yet.</Empty>}
-        </ul>
+        <div className="people-pick stack">
+          {mine.length > 0 && <>
+            <p className="eyebrow pad">{cohortName(profile.cohort_id) ?? 'Your cohort'}</p>
+            <ul className="list">{mine.map(pickRow)}</ul>
+          </>}
+          {others.length > 0 && <>
+            <p className="eyebrow pad">Everyone else</p>
+            <ul className="list">{others.map(pickRow)}</ul>
+          </>}
+          {everyone.length === 0 && <Empty>No one to message yet.</Empty>}
+        </div>
       )}
       {!picking && (!threads ? <div className="skeleton-list" /> : threads.length === 0 ? (
-        <Empty>No direct messages yet. Start one with anyone in your cohort or your mentor.</Empty>
+        <Empty>No direct messages yet. Start one with anyone, in any cohort.</Empty>
       ) : (
         <ul className="list dm-list">
           {threads.map((t) => {
@@ -89,6 +104,7 @@ export function DirectList() {
                   <Who p={p} size={24} />
                   <div className="grow" style={{ minWidth: 0 }}>
                     <strong>{p?.display_name ?? '…'}</strong>
+                    {p && p.cohort_id !== profile.cohort_id && cohortName(p.cohort_id) && <span className="small muted"> · {cohortName(p.cohort_id)}</span>}
                     <p className="small muted dm-preview">{t.last_from_me ? 'You: ' : ''}{t.last_text}</p>
                   </div>
                   <div className="stack tight" style={{ alignItems: 'flex-end' }}>

@@ -638,4 +638,20 @@ await db.query(`update bonus_completions set completed = true where bonus_challe
 assert.equal((await asUser(U1, `select count(*)::int n from bonus_challenges where user_id=$1`, [U3])).rows[0].n, 0);
 console.log('✓ random daily challenges: 300+, different for everyone, no repeats, photo required, mentor review');
 
+// --- DMs across cohorts; staff label -------------------------------------------------
+await as(ADMIN, `select move_to_cohort($1, $2)`, [U9, C2]);
+await asUser(U1, `insert into messages (channel, user_id, recipient_id, message_text) values ('dm', $1, $2, 'hi from another cohort')`, [U1, U9]);
+assert.equal((await asUser(U9, `select count(*)::int n from messages where channel='dm' and user_id=$1`, [U1])).rows[0].n, 1,
+  'DMs work across cohorts');
+// An Admin who mentors a cohort shows as Mentor; one who mentors none, as Admin
+await as(ADMIN, `select set_cohort_mentor($1, $2, true)`, [defaultCohort, ADMIN]);
+await as(ADMIN, `insert into messages (channel, cohort_id, user_id, message_text) values ('cohort', $1, $2, 'label test')`, [defaultCohort, ADMIN]);
+assert.equal((await one(`select title from notifications where user_id=$1 and type='cohort_messages' order by created_at desc limit 1`, [U1])).title,
+  'Marishiten · Mentor');
+await db.query(`delete from cohort_mentors where user_id=$1`, [ADMIN]);
+await as(ADMIN, `insert into messages (channel, cohort_id, user_id, message_text) values ('cohort', $1, $2, 'label test 2')`, [defaultCohort, ADMIN]);
+assert.equal((await one(`select title from notifications where user_id=$1 and type='cohort_messages' order by created_at desc limit 1`, [U1])).title,
+  'Marishiten · Admin');
+console.log('✓ DMs across cohorts, staff label');
+
 console.log('\nAll SQL tests passed.');

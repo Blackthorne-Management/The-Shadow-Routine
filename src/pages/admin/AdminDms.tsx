@@ -4,6 +4,7 @@ import { supabase, friendlyError } from '../../lib/supabase';
 import { timeAgo } from '../../lib/dates';
 import { DirectThread, loadPeople, type Person } from '../DirectMessages';
 import { Empty, ErrorText } from '../../components/ui';
+import { useCohorts } from '../../lib/cohorts';
 
 interface Pair { a: string; b: string; last_text: string; last_at: string; messages: number }
 
@@ -12,6 +13,12 @@ export default function AdminDms() {
   const [pairs, setPairs] = useState<Pair[] | null>(null);
   const [people, setPeople] = useState<Map<string, Person>>(new Map());
   const [error, setError] = useState('');
+  const { cohorts } = useCohorts();
+  const label = (id: string) => {
+    const p = people.get(id);
+    const c = cohorts?.find((x) => x.id === p?.cohort_id)?.name;
+    return <>{p?.display_name ?? '…'}{c && <span className="small muted"> ({c})</span>}</>;
+  };
 
   useEffect(() => {
     Promise.all([supabase.rpc('admin_dm_threads'), loadPeople()]).then(([{ data, error }, map]) => {
@@ -31,7 +38,7 @@ export default function AdminDms() {
             <li key={`${p.a}-${p.b}`}>
               <Link to={`/admin/dms/${p.a}/${p.b}`} className="list-row link-row">
                 <div className="grow" style={{ minWidth: 0 }}>
-                  <strong>{people.get(p.a)?.display_name ?? '…'} <span className="muted">↔</span> {people.get(p.b)?.display_name ?? '…'}</strong>
+                  <strong>{label(p.a)} <span className="muted">↔</span> {label(p.b)}</strong>
                   <p className="small muted dm-preview">{p.last_text}</p>
                 </div>
                 <div className="stack tight" style={{ alignItems: 'flex-end' }}>

@@ -2,14 +2,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { CATEGORY_ORDER } from '../lib/goals';
 import type { WeeklyScore } from '../lib/types';
+import { rankRows } from '../lib/ranking';
+import { titleFor } from '../lib/ranks';
 import { BandDot, Empty } from './ui';
 import { Icon } from './Icon';
 import Emblem from './Emblem';
 import type { Sex } from '../lib/types';
 
 interface Row extends WeeklyScore { name: string; move: number; sex: Sex | null; rank_level: number; mentor: boolean; cohort: string | null; rank: number | null; top: boolean }
-
-const greens = (r: WeeklyScore) => Object.values(r.band_per_category ?? {}).filter((b) => b === 'green').length;
 
 /**
  * Ranked list for one week; updates live via Supabase Realtime.
@@ -41,14 +41,11 @@ export default function LeaderboardList({ week, meId, cohortId, cohortNames }: {
     if (cohortId !== undefined) {
       // Cohort board: re-rank among this cohort's participants (mentors stay unranked)
       list = list.filter((r) => r.cohort === cohortId);
-      const ranked = list.filter((r) => !r.mentor)
-        .sort((x, y) => Number(y.total_points) - Number(x.total_points) || greens(y) - greens(x));
-      ranked.forEach((r, i) => {
-        const prev = ranked[i - 1];
-        r.rank = prev && Number(prev.total_points) === Number(r.total_points) && greens(prev) === greens(r) ? prev.rank : i + 1;
+      const ranks = rankRows(list);
+      list.forEach((r) => {
+        r.rank = ranks.get(r.user_id) ?? null;
         r.top = r.rank === 1 && Number(r.total_points) > 0;
       });
-      list.filter((r) => r.mentor).forEach((r) => { r.rank = null; r.top = false; });
     }
     const next = list.map((r) => {
       const before = prevRanks.current.get(r.user_id);
@@ -109,6 +106,73 @@ export default function LeaderboardList({ week, meId, cohortId, cohortNames }: {
           </li>
         );
       })}
+    </ol>
+  );
+}
+
+interface OverallRow {
+  id: string; display_name: string; sex: Sex | null; rank_level: number; role: string;
+  cohort_id: string | null; cumulative_cycle_points: number; status: string; mentor_participates: boolean;
+}
+
+/**
+ * The whole program so far: cycle points (every program week added up), the
+ * same total that drives the 10 ranks. With `cohortId`: that cohort only.
+ */
+export function OverallList({ meId, cohortId, cohortNames }: {
+  meId?: string; cohortId?: string | null; cohortNames?: Map<string, string>;
+}) {
+  const [rows, setRows] = useState<(OverallRow & { rank: number | null })[] | null>(null);
+
+  const load = useCallback(async () => {
+    const { data } = await supabase.from('profiles')
+      .select('id,display_name,sex,rank_level,role,cohort_id,cumulative_cycle_points,status,mentor_participates');
+    let list = ((data as OverallRow[]) ?? [])
+      .filter((p) => p.status === 'active' && (p.role === 'participant' || p.mentor_participates));
+    if (cohortId !== undefined) list = list.filter((p) => p.cohort_id === cohortId);
+    list.sort((x, y) => Number(y.cumulative_cycle_points) - Number(x.cumulative_cycle_points) || x.display_name.localeCompare(y.display_name));
+    // Ties share a rank; mentors who check in are shown but unranked
+    let last: { pts: number; rank: number } | null = null, n = 0;
+    setRows(list.map((p) => {
+      if (p.role === 'admin') return { ...p, rank: null };
+      n += 1;
+      const pts = Number(p.cumulative_cycle_points);
+      const rank = last && last.pts === pts ? last.rank : n;
+      last = { pts, rank };
+      return { ...p, rank };
+    }));
+  }, [cohortId]);
+
+  useEffect(() => {
+    load();
+    const ch = supabase.channel(`overall-${cohortId ?? 'all'}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'weekly_scores' }, () => load())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [cohortId, load]);
+
+  if (!rows) return <div className="skeleton-list" />;
+  if (rows.length === 0) return <Empty>No one on the board yet.</Empty>;
+
+  return (
+    <ol className="board">
+      {rows.map((r) => (
+        <li key={r.id} className={`board-row ${r.rank === 1 && Number(r.cumulative_cycle_points) > 0 ? 'top' : ''} ${r.id === meId ? 'me' : ''}`}>
+          <span className="board-rank">{r.rank ?? '–'}</span>
+          <div className="board-main">
+            <div className="board-name">
+              {r.role === 'admin' ? <span className="level">Mentor</span> : <Emblem level={r.rank_level} sex={r.sex} size={22} />}
+              {r.display_name}
+              {r.id === meId && <span className="you">you</span>}
+              {cohortId === undefined && cohortNames && cohortNames.size > 1 && r.cohort_id && (
+                <span className="small muted">{cohortNames.get(r.cohort_id)}</span>
+              )}
+            </div>
+            <span className="small muted">{r.role === 'admin' ? 'Checks in with the cohort' : titleFor(r.rank_level, r.sex)}</span>
+          </div>
+          <div className="board-pts">{Math.round(Number(r.cumulative_cycle_points)).toLocaleString()}</div>
+        </li>
+      ))}
     </ol>
   );
 }

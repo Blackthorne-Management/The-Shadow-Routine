@@ -8,6 +8,8 @@ import type { Band, Infraction, MonthStatus, MonthlyResult, Punishment, Reward, 
 import MonthPanel from '../components/MonthPanel';
 import RankCard from '../components/RankCard';
 import { isStaff, staffLabel } from '../lib/roles';
+import { rankRows } from '../lib/ranking';
+import { useViewCohorts } from '../lib/cohorts';
 import { LEVELS } from '../lib/ranks';
 import { ProgressBar, Splash, TickMeter, TopBar } from '../components/ui';
 import { Icon, ThemeIcon } from '../components/Icon';
@@ -19,7 +21,8 @@ export default function Home() {
   const { profile, goals } = useAuth();
   const [today, setToday] = useState<TodayContext | null>(null);
   const [score, setScore] = useState<WeeklyScore | null>(null);
-  const [cohortSize, setCohortSize] = useState(0);
+  const [ranks, setRanks] = useState<{ cohort: number | null; cohortSize: number; global: number | null; globalSize: number } | null>(null);
+  const { name: cohortName } = useViewCohorts(profile);
   const [daily, setDaily] = useState<Record<string, number>>({});
   const [punishments, setPunishments] = useState<Punishment[]>([]);
   const [notices, setNotices] = useState<Infraction[]>([]);
@@ -34,7 +37,7 @@ export default function Home() {
     setToday(t);
     const [s, n, e, p, i, m, r, mr] = await Promise.all([
       supabase.from('weekly_scores').select('*').eq('user_id', profile.id).eq('week_start_date', t.week_start).maybeSingle(),
-      supabase.from('weekly_scores').select('id', { count: 'exact', head: true }).eq('week_start_date', t.week_start),
+      supabase.from('weekly_scores').select('user_id,total_points,band_per_category,consistency_rank').eq('week_start_date', t.week_start),
       supabase.from('daily_entries').select('entry_date,value_reported').eq('user_id', profile.id)
         .gte('entry_date', t.week_start).lte('entry_date', addDays(t.week_start, 6)),
       supabase.from('punishments').select('*').eq('user_id', profile.id).neq('proof_status', 'accepted').order('created_at', { ascending: false }),
@@ -47,7 +50,18 @@ export default function Home() {
     setRewards((r.data as Reward[]) ?? []);
     setResults((mr.data as MonthlyResult[]) ?? []);
     setScore((s.data as WeeklyScore) ?? null);
-    setCohortSize(n.count ?? 0);
+    // Your rank in your cohort (re-ranked among it) and across everyone
+    const { data: ppl } = await supabase.from('profiles').select('id,cohort_id,role');
+    const who = new Map((ppl ?? []).map((p) => [p.id as string, p as { cohort_id: string | null; role: string }]));
+    const week = ((n.data ?? []) as Pick<WeeklyScore, 'user_id' | 'total_points' | 'band_per_category' | 'consistency_rank'>[])
+      .map((r) => ({ ...r, mentor: who.get(r.user_id)?.role === 'admin', cohort: who.get(r.user_id)?.cohort_id ?? null }));
+    const mine = week.filter((r) => r.cohort === profile.cohort_id);
+    setRanks({
+      cohort: rankRows(mine).get(profile.id) ?? null,
+      cohortSize: mine.filter((r) => !r.mentor).length,
+      global: week.find((r) => r.user_id === profile.id)?.consistency_rank ?? null,
+      globalSize: week.filter((r) => r.consistency_rank).length,
+    });
     // Goals with progress, per day of the week
     const perDay: Record<string, number> = {};
     for (const row of e.data ?? []) if (Number(row.value_reported) > 0) perDay[row.entry_date] = (perDay[row.entry_date] ?? 0) + 1;
@@ -79,7 +93,9 @@ export default function Home() {
 
   return (
     <main className="screen with-tabs">
-      <TopBar scene pill={score?.consistency_rank ? `#${score.consistency_rank} rank` : formatDay(today.date, { weekday: 'short' })} />
+      <TopBar scene pills={ranks?.cohort || ranks?.global
+        ? [ranks.cohort ? `#${ranks.cohort} ${cohortName ?? 'cohort'}` : null, ranks.global ? `#${ranks.global} global` : null]
+        : [formatDay(today.date, { weekday: 'short' })]} />
 
       <div className="linked">
         {profile.role === 'participant' || profile.mentor_participates
@@ -150,8 +166,9 @@ export default function Home() {
       <div className="pair">
         <section className="card">
           <p className="stat-label">Rank</p>
-          <p className="stat-sub">Out of {cohortSize || '–'}</p>
-          <p className="stat-value">#{score?.consistency_rank ?? '–'}</p>
+          <p className="stat-sub">in {cohortName ?? 'your cohort'}, of {ranks?.cohortSize || '–'}</p>
+          <p className="stat-value">#{ranks?.cohort ?? '–'}</p>
+          <p className="stat-sub">#{ranks?.global ?? '–'} of {ranks?.globalSize || '–'} global</p>
         </section>
         <section className="card">
           <p className="stat-label">Bonus</p>

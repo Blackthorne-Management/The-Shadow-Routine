@@ -5,7 +5,7 @@ import { COHORT_NAMES, useCohorts } from '../../lib/cohorts';
 import { staffLabel } from '../../lib/roles';
 import { Empty, ErrorText } from '../../components/ui';
 
-interface Member { id: string; display_name: string; role: string; is_super_admin: boolean; status: string; cohort_id: string | null }
+interface Member { id: string; display_name: string; role: string; is_super_admin: boolean; is_mentor: boolean; status: string; cohort_id: string | null }
 
 /** Admin only: every cohort, its members and mentors; create, rename, assign mentors. */
 export default function Cohorts() {
@@ -15,7 +15,7 @@ export default function Cohorts() {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
 
-  const loadPeople = () => supabase.from('profiles').select('id,display_name,role,is_super_admin,status,cohort_id')
+  const loadPeople = () => supabase.from('profiles').select('id,display_name,role,is_super_admin,is_mentor,status,cohort_id')
     .then(({ data }) => setPeople((data as Member[]) ?? []));
   useEffect(() => { loadPeople(); }, []);
 
