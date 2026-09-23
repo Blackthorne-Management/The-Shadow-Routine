@@ -12,7 +12,7 @@ export function CohortEmblem({ c, size = 36 }: { c: BracketCohort | null; size?:
   const box = { width: size, height: size, minWidth: size, minHeight: size };
   if (c?.emblem_url) return <img className="cohort-emblem" src={c.emblem_url} style={box} alt="" />;
   return (
-    <span className={`cohort-emblem placeholder ${c ? '' : 'empty'}`} style={{ ...box, fontSize: size * 0.42 }} aria-hidden>
+    <span className={`cohort-emblem placeholder ${c ? '' : 'tbd'}`} style={{ ...box, fontSize: size * 0.42 }} aria-hidden>
       {c ? c.name.charAt(0) : '?'}
     </span>
   );
