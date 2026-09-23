@@ -157,7 +157,7 @@ Messages use the founder's wording from the original spec text.
   11. **Ryūjin**: dragon god of the sea
   12. **Kagutsuchi**: god of fire
   13. **Izanagi / Izanami**: the creator pair (good for a founding or combined cohort)
-- Open question: rename the current "Cohort 1" now (e.g. to Marishiten), or only name new cohorts?
+- Done 2026-09-23: "Cohort 1" is renamed **Marishiten**, and the name shows on the chat tab, the message box and chat notifications. Still to build: naming new cohorts (part of the multi-cohort build).
 
 ## 8. (Unclear) "We'll graph the punishments"
 - Means a chart of punishments over time? Or writing up the real punishment list? *(Possibly covered now by #6.)*

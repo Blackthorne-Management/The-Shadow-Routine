@@ -23,6 +23,11 @@ export default function Chat() {
   const tab = params.get('c');
   const channel: 'cohort' | 'global' | 'direct' = tab === 'global' ? 'global' : tab === 'direct' ? 'direct' : 'cohort';
   const unread = useDmUnread(profile?.id);
+  const [cohortName, setCohortName] = useState<string | null>(null);
+  useEffect(() => {
+    if (!cohort) return;
+    supabase.from('cohorts').select('name').eq('id', cohort).maybeSingle().then(({ data }) => setCohortName(data?.name ?? null));
+  }, [cohort]);
   const [messages, setMessages] = useState<ChatMessage[] | null>(null);
   const [members, setMembers] = useState<Map<string, Person>>(new Map());
   const [text, setText] = useState('');
@@ -83,7 +88,7 @@ export default function Chat() {
     <main className="screen with-tabs chat-screen">
       <TopBar pill={isAdmin ? `${staffLabel(profile)} view` : 'Chat'} />
       <div className="seg">
-        <button className={channel === 'cohort' ? 'on' : ''} onClick={() => setParams({})}>Cohort</button>
+        <button className={channel === 'cohort' ? 'on' : ''} onClick={() => setParams({})}>{cohortName ?? 'Cohort'}</button>
         <button className={channel === 'global' ? 'on' : ''} onClick={() => setParams({ c: 'global' })}>Everyone</button>
         <button className={channel === 'direct' ? 'on' : ''} onClick={() => setParams({ c: 'direct' })}>
           Direct{unread > 0 && <> <span className="count-badge">{unread}</span></>}
@@ -91,7 +96,7 @@ export default function Chat() {
       </div>
       {channel === 'direct' ? <DirectList /> : <>
       {!messages ? <div className="skeleton-list" /> : messages.length === 0 ? (
-        <Empty>{channel === 'cohort' ? 'No messages yet. Say something to your cohort.' : 'No messages yet. This channel reaches every participant.'}</Empty>
+        <Empty>{channel === 'cohort' ? `No messages yet. Say something to ${cohortName ?? 'your cohort'}.` : 'No messages yet. This channel reaches every participant.'}</Empty>
       ) : (
         <ul className="chat-list">
           {messages.map((m) => {
@@ -118,7 +123,7 @@ export default function Chat() {
       <form className="chat-compose" onSubmit={send}>
         <ErrorText>{error}</ErrorText>
         <div className="row gap">
-          <input className="grow" value={text} maxLength={1000} placeholder={channel === 'cohort' ? 'Message your cohort' : 'Message everyone'}
+          <input className="grow" value={text} maxLength={1000} placeholder={channel === 'cohort' ? `Message ${cohortName ?? 'your cohort'}` : 'Message everyone'}
             onChange={(e) => setText(e.target.value)} aria-label="Message" />
           <button className="btn primary" disabled={busy || !text.trim()}>Send</button>
         </div>

@@ -362,7 +362,7 @@ await as(U1, `insert into messages (cohort_id, user_id, message_text) values ($1
 assert.equal((await inbox(U1, 'cohort_messages')).length, 0, 'no notification for your own message');
 assert.equal((await inbox(U3, 'cohort_messages')).length, 1);
 assert.equal((await inbox(ADMIN, 'cohort_messages')).length, 1);
-assert.equal((await inbox(U3, 'cohort_messages'))[0].title, 'Cohort · NICK');
+assert.equal((await inbox(U3, 'cohort_messages'))[0].title, 'Marishiten · NICK');
 // Global chat is off by default; opting in delivers it
 await as(U1, `insert into messages (channel, cohort_id, user_id, message_text) values ('global', null, $1, 'hello everyone')`, [U1]);
 assert.equal((await inbox(U3, 'global_messages')).length, 0, 'global chat is opt-in');
