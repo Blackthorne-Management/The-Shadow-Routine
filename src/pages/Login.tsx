@@ -22,10 +22,10 @@ export default function Login() {
     if (!email.trim()) { setError('Enter your email first.'); return; }
     setError('');
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${location.origin}/settings`,
+      redirectTo: `${location.origin}/reset-password`,
     });
     if (error) setError(friendlyError(error));
-    else setInfo('Check your email for a reset link.');
+    else setInfo("If that email has an account, a reset link is on its way. Check your spam folder too.");
   }
 
   return (

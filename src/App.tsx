@@ -22,11 +22,12 @@ import DirectMessagePage from './pages/DirectMessages';
 import Ultimate from './pages/Ultimate';
 import Notifications from './pages/Notifications';
 import Onboarding from './pages/Onboarding';
+import ResetPassword from './pages/ResetPassword';
 // Participants never download the admin dashboard
 const Admin = lazy(() => import('./pages/admin/Admin'));
 
 export default function App() {
-  const { session, profile, goals, notif, loading } = useAuth();
+  const { session, profile, goals, notif, loading, recovering } = useAuth();
 
   if (!isConfigured) return <NotConfigured />;
   if (loading) return <Splash />;
@@ -36,10 +37,14 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/join" element={<Join />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );
   }
+
+  // Came in from a "forgot password" link: new password first
+  if (recovering) return <ResetPassword />;
 
   if (!profile) return <Splash message="Setting up your account…" retry />;
   if (profile.status === 'removed') return <Removed />;

@@ -12,7 +12,20 @@ interface AuthState {
   loading: boolean;
   refresh: () => Promise<void>;
   signOut: () => Promise<void>;
+  /** Signed in from a "forgot password" link and still needs to pick a new one */
+  recovering: boolean;
+  endRecovery: () => void;
 }
+
+// A reset link lands on /reset-password (and Supabase also fires PASSWORD_RECOVERY).
+// Remembered for the tab so a reload doesn't skip the new-password step.
+const RECOVERY_KEY = 'pw-recovery';
+const startsInRecovery = () => {
+  try {
+    if (location.pathname === '/reset-password' || /type=recovery/.test(location.hash)) sessionStorage.setItem(RECOVERY_KEY, '1');
+    return sessionStorage.getItem(RECOVERY_KEY) === '1';
+  } catch { return location.pathname === '/reset-password'; }
+};
 
 const Ctx = createContext<AuthState | null>(null);
 
@@ -22,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [notif, setNotif] = useState<NotificationSettings | null>(null);
   const [loading, setLoading] = useState(true);
+  const [recovering, setRecovering] = useState(startsInRecovery);
 
   const load = useCallback(async (s: Session | null) => {
     if (!s) {
@@ -47,6 +61,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s);
+      if (event === 'PASSWORD_RECOVERY') {
+        try { sessionStorage.setItem(RECOVERY_KEY, '1'); } catch { /* private mode */ }
+        setRecovering(true);
+      }
       // Token refreshes don't change who's signed in — skip the reload.
       if (event !== 'TOKEN_REFRESHED') load(s);
     });
@@ -62,8 +80,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
   }, []);
 
+  const endRecovery = useCallback(() => {
+    try { sessionStorage.removeItem(RECOVERY_KEY); } catch { /* private mode */ }
+    setRecovering(false);
+  }, []);
+
   return (
-    <Ctx.Provider value={{ session, profile, goals, notif, loading, refresh, signOut }}>
+    <Ctx.Provider value={{ session, profile, goals, notif, loading, refresh, signOut, recovering, endRecovery }}>
       {children}
     </Ctx.Provider>
   );
