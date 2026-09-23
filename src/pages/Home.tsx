@@ -7,6 +7,7 @@ import { addDays, formatDay, formatWeek, timeLeftToday } from '../lib/dates';
 import type { Band, Infraction, MonthStatus, MonthlyResult, Punishment, Reward, TodayContext, WeeklyScore } from '../lib/types';
 import MonthPanel from '../components/MonthPanel';
 import RankCard from '../components/RankCard';
+import { staffLabel } from '../lib/roles';
 import { ProgressBar, Splash, TickMeter, TopBar } from '../components/ui';
 import { Icon, ThemeIcon } from '../components/Icon';
 
@@ -68,7 +69,6 @@ export default function Home() {
 
   const logged = today.entries.length > 0;
   const open = today.program.status === 'active' || today.program.status === 'unset';
-  const first = profile.display_name.split(' ')[0];
   const total = Number(score?.total_points ?? 0);
 
   async function acknowledge(id: string) {
@@ -81,9 +81,16 @@ export default function Home() {
       <TopBar scene pill={score?.consistency_rank ? `#${score.consistency_rank} rank` : formatDay(today.date, { weekday: 'short' })} />
 
       <div className="linked">
-        <section className="card">
-          <p className="hello">{first}, <span>welcome back</span></p>
-        </section>
+        {profile.role === 'participant'
+          ? <RankCard points={Number(profile.cumulative_cycle_points ?? 0)} sex={profile.sex} name={profile.display_name} />
+          : (
+            <section className="card">
+              <div className="rank-head">
+                <span className="level">{staffLabel(profile)}</span>
+                <p className="rank-name grow">{profile.display_name}</p>
+              </div>
+            </section>
+          )}
         <section className="card">
           <div>
             <p className="stat-label">This week</p>
@@ -99,7 +106,6 @@ export default function Home() {
         </section>
       </div>
 
-      {profile.role === 'participant' && <RankCard points={Number(profile.cumulative_cycle_points ?? 0)} sex={profile.sex} />}
 
       {notices.map((n) => (
         <div key={n.id} className="notice red">

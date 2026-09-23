@@ -30,20 +30,27 @@ export default function RankCard({ points, sex, name, from }: {
 
   return (
     <section className="card rank-card">
-      <div className="row gap">
-        <Emblem level={level} sex={sex} size={56} />
+      <div className="rank-head">
+        <Emblem level={level} sex={sex} size={name ? 72 : 56} />
         <div className="grow">
-          {name && <p className="eyebrow">{name}</p>}
-          <p className="stat-label">{titleFor(level, sex)}</p>
-          <p className="stat-sub">Rank {level} of 10</p>
+          {name ? <>
+            <p className="rank-name">{name}</p>
+            <p className="rank-title">{titleFor(level, sex)}</p>
+          </> : <>
+            <p className="stat-label">{titleFor(level, sex)}</p>
+            <p className="stat-sub">Rank {level} of 10</p>
+          </>}
         </div>
       </div>
       <div className="rank-bar" role="progressbar" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}>
         <div key={level} className="rank-fill" style={{ width: `${Math.max(0, Math.min(100, pct))}%` }} />
+        <span className="rank-bar-text">
+          {next ? `${fmt(next.threshold - shown)} points until next level` : 'Max level reached'}
+        </span>
       </div>
       <div className="cat-meta">
         <span>{fmt(shown)} / {fmt(CYCLE_MAX)} cycle pts</span>
-        <span>{next ? `${titleFor(next.level, sex)} at ${fmt(next.threshold)}` : 'The maximum. Perfect cycle.'}</span>
+        <span>{next ? `Next: ${titleFor(next.level, sex)}` : 'Perfect cycle.'}</span>
       </div>
     </section>
   );
