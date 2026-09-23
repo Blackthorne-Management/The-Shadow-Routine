@@ -9,9 +9,10 @@ import { TopBar } from '../components/ui';
 
 /** A cohort's seal: its emblem art, or a placeholder with its initial. */
 export function CohortEmblem({ c, size = 36 }: { c: BracketCohort | null; size?: number }) {
-  if (c?.emblem_url) return <img className="cohort-emblem" src={c.emblem_url} width={size} height={size} alt="" />;
+  const box = { width: size, height: size, minWidth: size, minHeight: size };
+  if (c?.emblem_url) return <img className="cohort-emblem" src={c.emblem_url} style={box} alt="" />;
   return (
-    <span className={`cohort-emblem placeholder ${c ? '' : 'empty'}`} style={{ width: size, height: size, fontSize: size * 0.42 }} aria-hidden>
+    <span className={`cohort-emblem placeholder ${c ? '' : 'empty'}`} style={{ ...box, fontSize: size * 0.42 }} aria-hidden>
       {c ? c.name.charAt(0) : '?'}
     </span>
   );
