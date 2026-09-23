@@ -20,7 +20,7 @@ const slides = (sex: Sex | null): Slide[] => [
   {
     eyebrow: 'Your 5 goals',
     title: 'Five goals, weighted points.',
-    body: <p>Every goal is scored each week (Mon–Sun). Hit your target and you get the full points. A daily bonus challenge adds 7 more, up to 49 a week. <b>1,049 is a perfect week.</b></p>,
+    body: <p>Every goal is scored each week (Mon–Sun). Hit your target and you get the full points. Your own random daily challenge adds 7 more (with a photo), up to 49 a week. <b>1,049 is a perfect week.</b></p>,
     visual: (
       <ul className="ob-goals">
         <li><ThemeIcon theme="gym" size={18} /><span>Workouts: each one 30+ min, with a photo or clip</span><b>300</b></li>
@@ -28,7 +28,7 @@ const slides = (sex: Sex | null): Slide[] => [
         <li><ThemeIcon theme="reading" size={18} /><span>Custom goal 1</span><b>200</b></li>
         <li><ThemeIcon theme="schedule" size={18} /><span>Custom goal 2</span><b>150</b></li>
         <li><ThemeIcon theme="word" size={18} /><span>Custom goal 3</span><b>150</b></li>
-        <li><Icon name="bolt" size={18} /><span>Daily bonus challenge</span><b>+7</b></li>
+        <li><Icon name="bolt" size={18} /><span>Daily challenge: random, just for you, photo required</span><b>+7</b></li>
       </ul>
     ),
   },

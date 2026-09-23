@@ -40,6 +40,10 @@ export function friendlyError(err: unknown): string {
     PROGRAM_NOT_SET: 'Set the program start date first.',
     PATH_LOCKED: 'Your rank path is already set. Ask your mentor to change it.',
     BAD_SEX: 'Pick male or female.',
+    BONUS_PHOTO_REQUIRED: "Today's challenge needs a photo or clip before it counts.",
+    BONUS_REJECTED: 'Your mentor rejected that challenge photo. Add a new one for it to count.',
+    NAME_TAKEN: 'A cohort already has that name.',
+    NAME_REQUIRED: 'Give it a name.',
     'Invalid login credentials': 'Wrong email or password.',
   };
   for (const [code, text] of Object.entries(map)) if (msg.includes(code)) return text;

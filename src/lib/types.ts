@@ -213,7 +213,11 @@ export interface TodayContext {
   week_start: string;
   program: ProgramState;
   workouts: Workout[];
-  challenge: { id: string; description: string; point_value: number } | null;
+  challenge: {
+    id: string; description: string; point_value: number;
+    category: string | null; photo_hint: string | null;
+    photo_path: string | null; review_status: 'rejected' | null; review_note: string | null;
+  } | null;
   bonus_completed: boolean | null;
   entries: { goal_id: string; value: number; notes: string | null; details: Record<string, unknown> | null }[];
 }

@@ -141,20 +141,9 @@ export default function CheckIn() {
         )}
 
         {step.kind === 'bonus' && ctx.challenge && (
-          <>
-            <section className="card q-card">
-              <div className="row between">
-                <span className="goal-icon"><Icon name="bolt" /></span>
-                <span className="level">+{ctx.challenge.point_value} pts</span>
-              </div>
-              <div className="stack tight">
-                <p className="eyebrow">Today's bonus · {formatDay(ctx.date)}</p>
-                <h1 className="q-text">{ctx.challenge.description}</h1>
-              </div>
-            </section>
-            <p className="muted center-text">Did you complete it?</p>
-            <YesNo value={bonus == null ? null : bonus} onPick={(v) => { setBonus(v); setTimeout(next, 160); }} />
-          </>
+          <BonusStep challenge={ctx.challenge} date={ctx.date} userId={profile.id} value={bonus}
+            onChallenge={(c) => setCtx((x) => (x ? { ...x, challenge: c } : x))}
+            onPick={(v, advance) => { setBonus(v); if (advance) setTimeout(next, 160); }} onNext={next} />
         )}
 
         {step.kind === 'review' && (
@@ -180,7 +169,7 @@ export default function CheckIn() {
                   <button className="review-row" onClick={() => setI(goals.length)}>
                     <span className="goal-icon sm"><Icon name="bolt" /></span>
                     <span className="grow">{ctx.challenge.description}</span>
-                    <strong className={bonus == null ? 'missing' : ''}>{bonus == null ? '—' : bonus ? 'Done' : 'Skipped'}</strong>
+                    <strong className={bonus == null ? 'missing' : ''}>{bonus == null ? '—' : bonus ? 'Done · photo' : 'Skipped'}</strong>
                   </button>
                 </li>
               )}
@@ -437,5 +426,81 @@ function Done({ score, edited, rank, sex, home }: {
         <Link to={home} className="btn primary grow">Done</Link>
       </div>
     </main>
+  );
+}
+
+type Challenge = NonNullable<TodayContext['challenge']>;
+
+/** Today's personal challenge. "Yes" needs a photo or clip before it counts. */
+function BonusStep({ challenge, date, userId, value, onChallenge, onPick, onNext }: {
+  challenge: Challenge; date: string; userId: string; value: boolean | null;
+  onChallenge: (c: Challenge) => void; onPick: (v: boolean, advance: boolean) => void; onNext: () => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+  const rejected = challenge.review_status === 'rejected';
+  const hasPhoto = !!challenge.photo_path && !rejected;
+
+  async function pickMedia(file: File | undefined) {
+    if (!file) return;
+    if (file.size > MAX_MB * 1024 * 1024) { setError(`Files must be under ${MAX_MB} MB.`); return; }
+    setError(''); setUploading(true);
+    const ext = (file.name.split('.').pop() || (file.type.startsWith('video') ? 'mp4' : 'jpg')).toLowerCase().replace(/[^a-z0-9]/g, '');
+    const path = `${userId}/bonus/${date}/${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage.from('proofs').upload(path, file, { contentType: file.type });
+    if (upErr) { setUploading(false); setError(friendlyError(upErr)); return; }
+    const { error: rpcErr } = await supabase.rpc('set_bonus_photo', { p_path: path });
+    setUploading(false);
+    if (rpcErr) { setError(friendlyError(rpcErr)); return; }
+    onChallenge({ ...challenge, photo_path: path, review_status: null, review_note: null });
+  }
+
+  return (
+    <>
+      <section className="card q-card">
+        <div className="row between">
+          <span className="goal-icon"><Icon name="bolt" /></span>
+          <span className="level">+{challenge.point_value} pts</span>
+        </div>
+        <div className="stack tight">
+          <p className="eyebrow">Your challenge today{challenge.category ? ` · ${challenge.category}` : ''}</p>
+          <h1 className="q-text">{challenge.description}</h1>
+          {challenge.photo_hint && <p className="small muted"><Icon name="camera" size={14} /> Photo: {challenge.photo_hint}</p>}
+        </div>
+      </section>
+      <p className="muted center-text">Did you complete it?</p>
+      <YesNo value={value} onPick={(v) => onPick(v, !v || hasPhoto)} />
+
+      {value === true && (
+        <>
+          {rejected && (
+            <div className="notice red">
+              <strong>Your mentor rejected this photo</strong>
+              {challenge.review_note && <p>{challenge.review_note}</p>}
+              <p>Add a new photo or clip for it to count.</p>
+            </div>
+          )}
+          {hasPhoto ? (
+            <div className="media-picked">
+              <MediaThumb path={challenge.photo_path!} />
+              <div className="stack tight grow">
+                <strong>Proof attached</strong>
+                <label className="link">Replace
+                  <input type="file" accept="image/*,video/*" hidden onChange={(e) => pickMedia(e.target.files?.[0])} />
+                </label>
+              </div>
+            </div>
+          ) : (
+            <label className="file-drop paper">
+              <input type="file" accept="image/*,video/*" onChange={(e) => pickMedia(e.target.files?.[0])} />
+              <Icon name="camera" />
+              <span>{uploading ? 'Uploading…' : 'Add a photo or clip to count it'}</span>
+            </label>
+          )}
+          <ErrorText>{error}</ErrorText>
+          <button type="button" className="btn primary block" disabled={!hasPhoto || uploading} onClick={onNext}>Next</button>
+        </>
+      )}
+    </>
   );
 }

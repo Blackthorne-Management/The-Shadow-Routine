@@ -104,6 +104,9 @@ console.log('✓ pace starts at activation (new participants start neutral)');
 // --- today's check-in (live scoring) ----------------------------------------
 const ctx = (await as(U1, `select today_context() c`)).rows[0].c;
 assert.ok(ctx.challenge, 'bonus challenge auto-rotated in');
+// The daily challenge is personal and needs a photo before it can count
+assert.ok(ctx.challenge.category && ctx.challenge.photo_hint, 'challenge has a category and photo hint');
+await as(U1, `select set_bonus_photo($1)`, [`${U1}/bonus/today.jpg`]);
 const g1 = Object.fromEntries((await db.query(`select category, id from goals where user_id=$1`, [U1])).rows.map(r => [r.category, r.id]));
 const entries = [
   { goal_id: g1.gym, value: 1, details: { workout_type: 'Lift', minutes: 45 } },
@@ -170,7 +173,8 @@ for (let i = 0; i < 3; i++) await put(U1, g1.custom_2, days[i], 1);
 for (let i = 0; i < 6; i++) await put(U1, g1.custom_3, days[i], 1);
 // bonus every day → 7 × 7 = 49 (the max)
 for (let i = 0; i < 7; i++) {
-  const ch = (await one(`select (ensure_bonus_challenge($1::date)).id`, [days[i]])).id;
+  const ch = (await as(U1, `select (ensure_bonus_challenge($1::date)).id`, [days[i]])).rows[0].id;
+  await db.query(`update bonus_challenges set photo_path = $2 where id = $1`, [ch, `${U1}/bonus/${days[i]}.jpg`]);
   await db.query(`insert into bonus_completions (user_id, bonus_challenge_id, completed) values ($1,$2,true)`, [U1, ch]);
 }
 const created = (await one(`select finalize_week($1::date) n`, [W])).n;
@@ -424,6 +428,7 @@ await assert.rejects(as(U1, `select mentor_save_goals($1)`, [JSON.stringify(goal
 await as(M2, `select mentor_save_goals($1)`, [JSON.stringify(goals)]);
 await as(M2, `select set_mentor_participation(true)`);
 assert.equal((await one(`select count(*)::int n from goals where user_id=$1 and status='approved'`, [M2])).n, 5);
+await as(M2, `select set_bonus_photo($1)`, [`${M2}/bonus/today.jpg`]);
 await as(M2, `select submit_checkin($1, true, '[]')`, [JSON.stringify((await db.query(
   `select id goal_id, 1 as value from goals where user_id=$1 and category <> 'gym'`, [M2])).rows)]);
 const wk = (await one(`select week_start(local_today($1)) w`, [M2])).w;
@@ -456,7 +461,7 @@ await db.exec(`grant usage on schema public to authenticated;
   grant select on public.dm_reads to authenticated;
   grant select, insert, update, delete on public.invite_codes to authenticated;
   grant execute on function is_admin(), is_super_admin(), my_chat_cohort(), can_dm(uuid), mentors_cohort(uuid), staff_in_cohort(uuid), staff_can_see(uuid), default_cohort() to authenticated;
-  grant select on public.goals to authenticated;`);
+  grant select on public.goals, public.bonus_challenges to authenticated;`);
 const asUser = async (uid, sql, params) => {
   await db.query(`select set_config('request.jwt.claim.sub', $1, false)`, [uid]);
   await db.exec('set role authenticated');
@@ -598,5 +603,39 @@ assert.equal((await one(`select is_mentor from profiles where id=$1`, [M2])).is_
 await as(ADMIN, `select set_cohort_mentor($1, $2, true)`, [defaultCohort, M2]);
 assert.equal((await one(`select is_mentor from profiles where id=$1`, [M2])).is_mentor, true);
 console.log('✓ mentors linked to cohorts: visibility, approvals, alerts, chat, invites');
+
+// --- Random photo challenges ---------------------------------------------------------
+assert.ok((await one(`select count(*)::int n from bonus_presets where active`)).n >= 300, '300+ challenges in the library');
+// Different for everyone on the same day, and stable once assigned
+const dayX = '2026-10-05';
+const picks = [];
+for (const u of [U1, U3, U9, M2]) picks.push((await as(u, `select (ensure_bonus_challenge($1::date)).preset_id p`, [dayX])).rows[0].p);
+assert.equal(new Set(picks).size, picks.length, 'everyone gets a different challenge that day');
+assert.equal((await as(U1, `select (ensure_bonus_challenge($1::date)).preset_id p`, [dayX])).rows[0].p, picks[0], 'same challenge on repeat asks');
+// No repeats for a person over a long stretch, and never the same category two days running
+const mine = [];
+for (let i = 0; i < 60; i++) {
+  const d = new Date(Date.UTC(2026, 10, 1 + i)).toISOString().slice(0, 10);
+  mine.push((await as(U3, `select c.preset_id, c.category from ensure_bonus_challenge($1::date) c`, [d])).rows[0]);
+}
+assert.equal(new Set(mine.map((c) => c.preset_id)).size, 60, 'no repeat challenges in 60 days');
+assert.ok(mine.every((c, i) => i === 0 || c.category !== mine[i - 1].category), 'category changes day to day');
+// Photo required; a mentor rejection removes the points; a new photo clears it
+const chU3 = (await as(U3, `select (ensure_bonus_challenge(local_today($1))).id`, [U3])).rows[0].id;
+await assert.rejects(db.query(`insert into bonus_completions (user_id, bonus_challenge_id, completed) values ($1,$2,true)`, [U3, chU3]),
+  /BONUS_PHOTO_REQUIRED/);
+await assert.rejects(as(U3, `select set_bonus_photo('someone-else/x.jpg')`), /BAD_PATH/);
+await as(U3, `select set_bonus_photo($1)`, [`${U3}/bonus/x.jpg`]);
+await db.query(`insert into bonus_completions (user_id, bonus_challenge_id, completed) values ($1,$2,true)`, [U3, chU3]);
+await assert.rejects(as(U1, `select review_bonus($1, false, 'nope')`, [chU3]), /ADMIN_ONLY/);
+await as(ADMIN, `select review_bonus($1, false, 'Not the challenge')`, [chU3]);
+assert.equal((await one(`select completed from bonus_completions where bonus_challenge_id=$1`, [chU3])).completed, false);
+assert.equal((await one(`select title from notifications where user_id=$1 order by created_at desc limit 1`, [U3])).title, 'Bonus photo rejected');
+await assert.rejects(db.query(`update bonus_completions set completed = true where bonus_challenge_id=$1`, [chU3]), /BONUS_REJECTED/);
+await as(U3, `select set_bonus_photo($1)`, [`${U3}/bonus/y.jpg`]);
+await db.query(`update bonus_completions set completed = true where bonus_challenge_id=$1`, [chU3]);
+// Staff only see challenges for people they can see
+assert.equal((await asUser(U1, `select count(*)::int n from bonus_challenges where user_id=$1`, [U3])).rows[0].n, 0);
+console.log('✓ random daily challenges: 300+, different for everyone, no repeats, photo required, mentor review');
 
 console.log('\nAll SQL tests passed.');

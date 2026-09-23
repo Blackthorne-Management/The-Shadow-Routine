@@ -57,6 +57,10 @@ Rules that matter for fairness run **in Postgres**, not the browser:
   - **Admin → People:** move someone to another cohort.
   - Invites carry a cohort: participants join it, mentors mentor it. Mentors can only invite into their own cohorts.
   - `profiles.is_mentor` is kept in sync (= mentors at least one cohort).
+- **Daily challenges** (`…21_random_photo_challenges.sql`). A library of 320 challenges in 8 categories (`supabase/seed/bonus_challenges.tsv`; regenerate the insert with `scripts/gen-bonus-migration.py`). Each has a hint for what to photograph.
+  - Everyone gets their own random challenge each day (`ensure_bonus_challenge`). It avoids challenges the person had in the last 120 days, ones someone else already has that day, and yesterday's category.
+  - It counts (7 pts, max 49/week) only with a photo or clip (`set_bonus_photo`; a trigger on `bonus_completions` enforces it).
+  - Staff can reject a photo in **Admin → Bonus** (`review_bonus`). That removes the points and notifies the person; a new photo clears it. The library is edited there too.
 - **Direct messages:** `messages` rows with `channel = 'dm'` and a `recipient_id`. The two people read them, Admins can read all, and Mentors can't read other people's. Anyone active can DM anyone in their cohort or any staff member (`can_dm`). Unread counts come from `dm_reads` / `my_dm_threads()`. The recipient gets a `direct_messages` notification. The DM screen tells people Admins can see DMs.
 - **Staff badges:** `admin_pending_counts()` gives goal submissions, no-photo workout asks, and proof to review. The counts show on the Admin/Mentor tab and on each section.
 - **Infractions:** a rejected proof logs #1 (a warning, and the participant sees a "talk to your mentor" notice). #2 surfaces a manual **Remove participant** button for the admin.
