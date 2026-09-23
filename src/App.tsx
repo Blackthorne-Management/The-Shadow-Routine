@@ -46,6 +46,12 @@ export default function App() {
       <>
         <Routes>
           <Route path="/admin/*" element={<Suspense fallback={<Splash />}><Admin /></Suspense>} />
+          {/* A mentor who joined the cohort checks in like everyone else */}
+          <Route path="/my-goals" element={<ProposeGoals mentor />} />
+          {profile.mentor_participates && goals.length === 5 && <>
+            <Route path="/today" element={<Home />} />
+            <Route path="/checkin" element={<CheckIn />} />
+          </>}
           <Route path="/board" element={<Leaderboard />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/notifications" element={<Notifications />} />
@@ -53,7 +59,7 @@ export default function App() {
           <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/admin" replace />} />
         </Routes>
-        <TabBar admin />
+        <TabBar admin mentorToday={profile.mentor_participates && goals.length === 5} />
       </>
     );
   }

@@ -9,6 +9,7 @@ import { ErrorText, TopBar } from '../components/ui';
 import RankCard from '../components/RankCard';
 import Emblem from '../components/Emblem';
 import NotificationPrefs from '../components/NotificationPrefs';
+import MentorParticipation from '../components/MentorParticipation';
 
 export default function Settings() {
   const { profile, goals, session, refresh, signOut } = useAuth();
@@ -51,6 +52,8 @@ export default function Settings() {
       {profile?.role === 'participant' && (
         <RankCard points={Number(profile.cumulative_cycle_points ?? 0)} sex={profile.sex} />
       )}
+
+      {profile?.role === 'admin' && <MentorParticipation />}
 
       <section className="card">
         <h2>{profile?.role === 'admin' ? 'Push notifications' : 'Reminders & push'}</h2>

@@ -136,6 +136,10 @@ Messages use the founder's wording from the original spec text.
   10. Cohort, chat and notifications
 - Shown once per account (server-side flag). Existing accounts see it once too. Reopen any time from Me → How the app works.
 
+## 15. Mentors in the cohort + mentor invite links (logged, built and deployed 2026-09-22)
+- **Me → Join the cohort** (mentors only): set goals and check in. Scored weekly and shown on the leaderboard marked Mentor, but unranked: no place, never "most consistent", no punishments/rewards/month results/ranks.
+- **Admin → Invites:** choose Participant or Mentor. A mentor code signs someone up as a mentor (full mentor tools), active immediately.
+
 ## 8. (Unclear) "We'll graph the punishments"
 - Means a chart of punishments over time? Or writing up the real punishment list? *(Possibly covered now by #6.)*
 

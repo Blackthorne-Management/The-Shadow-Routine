@@ -29,7 +29,7 @@ export default function Leaderboard() {
       </div>
       <LeaderboardList week={week} meId={profile?.id} />
       <p className="legend small muted">
-        Ranked by points out of 1,049. Ties go to whoever has more green categories.
+        Ranked by points out of 1,049. Ties go to whoever has more green categories. Mentors who join in show here unranked.
         Dots (gym · refraining · 3 customs) show pace this week, and final results once a week closes.
       </p>
     </main>

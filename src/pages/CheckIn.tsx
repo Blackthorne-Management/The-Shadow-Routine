@@ -20,6 +20,8 @@ type Step = { kind: 'goal'; goal: Goal } | { kind: 'bonus' } | { kind: 'review' 
 export default function CheckIn() {
   const { profile, goals, refresh } = useAuth();
   const navigate = useNavigate();
+  const homePath = profile?.role === 'admin' ? '/today' : '/';
+  const home = homePath;
   const [rank, setRank] = useState<{ before: number; after: number; levelBefore: number; levelAfter: number } | null>(null);
   const [celebrated, setCelebrated] = useState(false);
   const [ctx, setCtx] = useState<TodayContext | null>(null);
@@ -63,7 +65,7 @@ export default function CheckIn() {
               : 'The 12 weeks are done. Your history stays here, read-only.'}
           </p>
         </section>
-        <Link to="/" className="btn primary block">Back</Link>
+        <Link to={home} className="btn primary block">Back</Link>
       </main>
     );
   }
@@ -75,7 +77,7 @@ export default function CheckIn() {
   ];
   const step = steps[i];
   const next = () => setI((n) => Math.min(n + 1, steps.length - 1));
-  const back = () => (i === 0 ? navigate('/') : setI(i - 1));
+  const back = () => (i === 0 ? navigate(homePath) : setI(i - 1));
   const setAnswer = (id: string, a: Answer) => setAnswers((s) => ({ ...s, [id]: a }));
   const answerAndAdvance = (id: string, a: Answer) => { setAnswer(id, a); setTimeout(next, 160); };
 
@@ -110,7 +112,7 @@ export default function CheckIn() {
     if (rank && rank.levelAfter > rank.levelBefore && !celebrated) {
       return <LevelUp level={rank.levelAfter} sex={profile.sex} onDone={() => setCelebrated(true)} />;
     }
-    return <Done score={result} edited={editing} rank={rank} sex={profile.sex} />;
+    return <Done score={result} edited={editing} rank={rank} sex={profile.sex} home={home} />;
   }
 
   const unanswered = goals.filter((g) => (g.category === 'gym' ? workouts == null : answers[g.id]?.value == null));
@@ -122,7 +124,7 @@ export default function CheckIn() {
         <div className="segments" aria-label={`Step ${i + 1} of ${steps.length}`}>
           {steps.map((_, n) => <span key={n} className={n <= i ? 'on' : ''} />)}
         </div>
-        <Link to="/" className="icon-btn" aria-label="Close"><Icon name="close" /></Link>
+        <Link to={home} className="icon-btn" aria-label="Close"><Icon name="close" /></Link>
       </header>
 
       <div className="question" key={i}>
@@ -408,8 +410,8 @@ function formatWorkouts(w: Workout[] | null) {
   return `${w.length} workout${w.length === 1 ? '' : 's'}${asks ? ` (${asks} for mentor)` : ''}`;
 }
 
-function Done({ score, edited, rank, sex }: {
-  score: WeeklyScore | null; edited: boolean; rank: { before: number; after: number } | null; sex: Sex | null;
+function Done({ score, edited, rank, sex, home }: {
+  score: WeeklyScore | null; edited: boolean; rank: { before: number; after: number } | null; sex: Sex | null; home: string;
 }) {
   return (
     <main className="screen">
@@ -428,11 +430,11 @@ function Done({ score, edited, rank, sex }: {
             </p>
           </section>
         )}
-        {rank && <RankCard points={rank.after} from={rank.before} sex={sex} />}
+        {rank && home === '/' && <RankCard points={rank.after} from={rank.before} sex={sex} />}
       </div>
       <div className="row gap">
         <Link to="/board" className="btn grow">Leaderboard</Link>
-        <Link to="/" className="btn primary grow">Done</Link>
+        <Link to={home} className="btn primary grow">Done</Link>
       </div>
     </main>
   );

@@ -11,7 +11,7 @@ export const supabase = createClient(url ?? 'http://localhost', key ?? 'missing'
 
 // Columns participants may read on profiles (email is hidden by column grants,
 // so `select('*')` would fail — always use this list).
-export const PROFILE_COLUMNS = 'id,username,display_name,role,status,timezone,activated_at,created_at,sex,cohort_id,cumulative_cycle_points,rank_level,onboarded_at';
+export const PROFILE_COLUMNS = 'id,username,display_name,role,status,timezone,activated_at,created_at,sex,cohort_id,cumulative_cycle_points,rank_level,onboarded_at,mentor_participates';
 
 /** Turns Postgres RAISE codes from our SQL functions into readable messages. */
 export function friendlyError(err: unknown): string {

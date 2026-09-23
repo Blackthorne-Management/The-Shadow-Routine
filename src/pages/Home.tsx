@@ -99,7 +99,7 @@ export default function Home() {
         </section>
       </div>
 
-      <RankCard points={Number(profile.cumulative_cycle_points ?? 0)} sex={profile.sex} />
+      {profile.role === 'participant' && <RankCard points={Number(profile.cumulative_cycle_points ?? 0)} sex={profile.sex} />}
 
       {notices.map((n) => (
         <div key={n.id} className="notice red">

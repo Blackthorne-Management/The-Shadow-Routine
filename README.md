@@ -43,6 +43,9 @@ Rules that matter for fairness run **in Postgres**, not the browser:
   - The mentor hears about: goal submissions, no-photo workouts, submitted proof and chat.
   - Everyone picks their types in **Me → Notifications**. Defaults are all on except Everyone chat.
 - **Chat channels:** Cohort (your cohort) and Everyone (all participants, for when there are several cohorts).
+- **Mentors** (`…12_mentor_participation.sql`). Invite codes carry a role; a `mentor` code creates an active mentor (admin).
+  - A mentor can switch on `mentor_participates` to set goals (`mentor_save_goals`, edited in place) and check in.
+  - They're scored and shown on the board but unranked (`consistency_rank` null, never top), and are never punished.
 - **Infractions:** a rejected proof logs #1 (a warning, and the participant sees a "talk to your mentor" notice). #2 surfaces a manual **Remove participant** button for the admin.
 
 ## Setup

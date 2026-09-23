@@ -410,4 +410,43 @@ assert.equal(String((await one(`select onboarded_at from profiles where id=$1`, 
 assert.equal((await one(`select onboarded_at from profiles where id=$1`, [U3])).onboarded_at, null, 'only your own account');
 console.log('✓ onboarding flag');
 
+// --- mentors: invite links + joining the cohort unranked -------------------
+const M2 = '00000000-0000-0000-0000-0000000000b2';
+await db.query(`insert into invite_codes (code, role) values ('MENTOR1', 'mentor')`);
+await db.query(`insert into auth.users (id, email, raw_user_meta_data) values ($1, 'm@example.com', $2)`,
+  [M2, { invite_code: 'MENTOR1', username: 'coach_two', display_name: 'Coach Two', sex: 'male' }]);
+const mentor2 = await one(`select role, status, activated_at from profiles where id=$1`, [M2]);
+assert.equal(mentor2.role, 'admin', 'a mentor link creates a mentor');
+assert.equal(mentor2.status, 'active', 'mentors skip goal approval');
+await assert.rejects(as(M2, `select submit_checkin('[]', null, null)`), /NOT_ACTIVE/, 'mentors only check in once they join');
+await assert.rejects(as(U1, `select set_mentor_participation(true)`), /ADMIN_ONLY/);
+await assert.rejects(as(U1, `select mentor_save_goals($1)`, [JSON.stringify(goals)]), /ADMIN_ONLY/);
+await as(M2, `select mentor_save_goals($1)`, [JSON.stringify(goals)]);
+await as(M2, `select set_mentor_participation(true)`);
+assert.equal((await one(`select count(*)::int n from goals where user_id=$1 and status='approved'`, [M2])).n, 5);
+await as(M2, `select submit_checkin($1, true, '[]')`, [JSON.stringify((await db.query(
+  `select id goal_id, 1 as value from goals where user_id=$1 and category <> 'gym'`, [M2])).rows)]);
+const wk = (await one(`select week_start(local_today($1)) w`, [M2])).w;
+const board = (await db.query(`select ws.user_id, ws.consistency_rank, ws.is_top_this_week, ws.total_points, p.role
+   from weekly_scores ws join profiles p on p.id = ws.user_id where ws.week_start_date = $1`, [wk])).rows;
+const mentorRow = board.find((r) => r.user_id === M2);
+assert.ok(mentorRow, 'a participating mentor shows on the weekly board');
+assert.equal(mentorRow.consistency_rank, null, 'mentors are unranked');
+assert.equal(mentorRow.is_top_this_week, false, "mentors can't be most consistent");
+const ranks = board.filter((r) => r.role === 'participant').map((r) => r.consistency_rank).sort((a, b) => a - b);
+assert.equal(ranks[0], 1, 'participants still rank from 1');
+// Close a past week where the mentor logged nothing: no punishments for the mentor
+await db.query(`update profiles set activated_at = '2026-08-01' where id = $1`, [M2]);
+await db.query(`select finalize_week('2026-08-24'::date)`);
+assert.equal((await one(`select count(*)::int n from punishments where user_id=$1`, [M2])).n, 0, 'mentors are never punished');
+// Saving goals again edits in place (keeps history)
+const beforeIds = (await db.query(`select id from goals where user_id=$1 order by category`, [M2])).rows.map((r) => r.id);
+await as(M2, `select mentor_save_goals($1)`, [JSON.stringify(goals.map((g) => ({ ...g, target_value: g.category === 'gym' ? 12 : g.target_value })))]);
+assert.deepEqual((await db.query(`select id from goals where user_id=$1 order by category`, [M2])).rows.map((r) => r.id), beforeIds);
+assert.equal((await one(`select target_value::int t from goals where user_id=$1 and category='gym'`, [M2])).t, 12);
+// Switching off takes the mentor back off this week's board
+await as(M2, `select set_mentor_participation(false)`);
+assert.equal((await db.query(`select 1 from weekly_scores where user_id=$1 and week_start_date=$2`, [M2, wk])).rows.length, 0);
+console.log('✓ mentors: invite links, joining the cohort unranked, never punished');
+
 console.log('\nAll SQL tests passed.');

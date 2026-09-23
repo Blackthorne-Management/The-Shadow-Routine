@@ -33,7 +33,8 @@ const INITIAL: Record<Category, Draft> = {
   custom_3:   { category: 'custom_3', ...CUSTOM_SUGGESTIONS[2], prompt: '', promptEdited: false, ...NO_STAKES },
 };
 
-export default function ProposeGoals() {
+/** Participants: goals + consequences for approval. Mentors (`mentor`): just goals, saved directly. */
+export default function ProposeGoals({ mentor = false }: { mentor?: boolean }) {
   const { goals, profile, refresh, signOut } = useAuth();
   const navigate = useNavigate();
   const [drafts, setDrafts] = useState<Record<Category, Draft>>(() => {
@@ -67,11 +68,11 @@ export default function ProposeGoals() {
       if (!d.label.trim()) return setError(`Give your ${c === 'refraining' ? 'refraining' : c.replace('_', ' ')} goal a name.`);
       if (!(d.target_value > 0)) return setError(`"${d.label}" needs a target above zero.`);
       if (c !== 'gym' && d.goal_type !== 'percentage' && d.target_value > 7) return setError(`"${d.label}": a week only has 7 days.`);
-      if (!d.red_week_punishment.trim() || !d.gold_reward.trim() || !d.three_gold_reward.trim()) {
+      if (!mentor && (!d.red_week_punishment.trim() || !d.gold_reward.trim() || !d.three_gold_reward.trim())) {
         return setError(`"${d.label || c}" needs its red-week punishment and both rewards.`);
       }
     }
-    if (!ultra.ultra_punishment.trim() || !ultra.ultra_wish.trim()) return setError('Add your Ultra Punishment and your one wish.');
+    if (!mentor && (!ultra.ultra_punishment.trim() || !ultra.ultra_wish.trim())) return setError('Add your Ultra Punishment and your one wish.');
     setBusy(true);
     const payload = CATEGORY_ORDER.map((c) => {
       const d = drafts[c];
@@ -81,11 +82,13 @@ export default function ProposeGoals() {
         red_week_punishment: d.red_week_punishment.trim(), gold_reward: d.gold_reward.trim(), three_gold_reward: d.three_gold_reward.trim(),
       };
     });
-    const { error } = await supabase.rpc('submit_goals', { p_goals: payload, p_consequences: ultra });
+    const { error } = mentor
+      ? await supabase.rpc('mentor_save_goals', { p_goals: payload })
+      : await supabase.rpc('submit_goals', { p_goals: payload, p_consequences: ultra });
     setBusy(false);
     if (error) return setError(friendlyError(error));
     await refresh();
-    navigate('/waiting', { replace: true });
+    navigate(mentor ? '/today' : '/waiting', { replace: true });
   }
 
   const gym = drafts.gym;
@@ -94,12 +97,13 @@ export default function ProposeGoals() {
 
   return (
     <main className="screen">
-      <TopBar pill="Step 1 of 2" />
+      <TopBar pill={mentor ? 'Mentor' : 'Step 1 of 2'} />
       <section className="card">
-        <h1>Set your five goals</h1>
+        <h1>{mentor ? 'Your goals' : 'Set your five goals'}</h1>
         <p className="muted">
-          Your mentor reviews these before you start, and may adjust targets. Every goal is scored weekly (Mon–Sun),
-          and judged monthly for Gold Months. Write each goal's punishment and rewards with your coach.
+          {mentor
+            ? "Check in alongside your cohort. You're scored every week and shown on the board, but unranked: no place, no punishments, no rewards. You can change these any time."
+            : "Your mentor reviews these before you start, and may adjust targets. Every goal is scored weekly (Mon–Sun), and judged monthly for Gold Months. Write each goal's punishment and rewards with your coach."}
         </p>
       </section>
 
@@ -114,7 +118,7 @@ export default function ProposeGoals() {
           A workout is any session of 30+ minutes, so a run and a lift on the same day count as two.
           Every workout needs a photo or short clip taken while you're doing it.
         </p>
-        <Stakes d={gym} onChange={(p) => update('gym', p)} />
+        {!mentor && <Stakes d={gym} onChange={(p) => update('gym', p)} />}
       </section>
 
       <section className="card">
@@ -130,14 +134,14 @@ export default function ProposeGoals() {
         </label>
         <p className="hint">Only you and your mentor can see this goal. The leaderboard shows just a colored dot.</p>
         <PromptPreview d={ref} prompt={promptFor(ref)} onEdit={(p) => update('refraining', { prompt: p, promptEdited: true })} />
-        <Stakes d={ref} onChange={(p) => update('refraining', p)} />
+        {!mentor && <Stakes d={ref} onChange={(p) => update('refraining', p)} />}
       </section>
 
       {(['custom_1', 'custom_2', 'custom_3'] as const).map((c, i) => (
-        <CustomGoal key={c} n={i + 1} d={drafts[c]} prompt={promptFor(drafts[c])} onChange={(p) => update(c, p)} />
+        <CustomGoal key={c} n={i + 1} d={drafts[c]} prompt={promptFor(drafts[c])} onChange={(p) => update(c, p)} stakes={!mentor} />
       ))}
 
-      <section className="card">
+      {!mentor && <section className="card">
         <GoalHead icon={<Icon name="crown" />} title="Your month-level stakes" points={0} />
         <p className="muted">
           Each month is also judged across all five goals. 80%+ in every goal with no gray weeks is an
@@ -153,21 +157,23 @@ export default function ProposeGoals() {
           <input value={ultra.ultra_punishment} maxLength={240} placeholder="Something harsh, in reference to your goals"
             onChange={(e) => setUltra({ ...ultra, ultra_punishment: e.target.value })} />
         </label>
-      </section>
+      </section>}
 
       <ErrorText>{error}</ErrorText>
       <button className="btn primary block sticky-cta" onClick={submit} disabled={busy}>
-        {busy ? 'Submitting…' : 'Submit for approval'}
+        {busy ? 'Saving…' : mentor ? 'Save my goals' : 'Submit for approval'}
       </button>
-      <div className="center-text">
-        <button className="link muted" onClick={signOut}>Sign out</button>
-      </div>
+      {!mentor && (
+        <div className="center-text">
+          <button className="link muted" onClick={signOut}>Sign out</button>
+        </div>
+      )}
     </main>
   );
 }
 
-function CustomGoal({ n, d, prompt, onChange }: {
-  n: number; d: Draft; prompt: string; onChange: (p: Partial<Draft>) => void;
+function CustomGoal({ n, d, prompt, onChange, stakes = true }: {
+  n: number; d: Draft; prompt: string; onChange: (p: Partial<Draft>) => void; stakes?: boolean;
 }) {
   return (
     <section className="card">
@@ -210,7 +216,7 @@ function CustomGoal({ n, d, prompt, onChange }: {
         </label>
       )}
       <PromptPreview d={d} prompt={prompt} onEdit={(p) => onChange({ prompt: p, promptEdited: true })} />
-      <Stakes d={d} onChange={onChange} />
+      {stakes && <Stakes d={d} onChange={onChange} />}
     </section>
   );
 }

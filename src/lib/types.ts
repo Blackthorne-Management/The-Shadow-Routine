@@ -25,6 +25,8 @@ export interface Profile {
   rank_level: number;
   /** when the "how it works" intro was first finished/skipped */
   onboarded_at: string | null;
+  /** a mentor who checks in alongside the cohort (scored, unranked) */
+  mentor_participates: boolean;
 }
 
 export interface ChatMessage {

@@ -7,7 +7,7 @@ import { Icon } from './Icon';
 import Emblem from './Emblem';
 import type { Sex } from '../lib/types';
 
-interface Row extends WeeklyScore { name: string; move: number; sex: Sex | null; rank_level: number }
+interface Row extends WeeklyScore { name: string; move: number; sex: Sex | null; rank_level: number; mentor: boolean }
 
 /** Ranked list for one week; updates live via Supabase Realtime. */
 export default function LeaderboardList({ week, meId }: { week: string; meId?: string }) {
@@ -18,16 +18,18 @@ export default function LeaderboardList({ week, meId }: { week: string; meId?: s
     const [{ data: scores }, { data: people }] = await Promise.all([
       supabase.from('weekly_scores').select('*').eq('week_start_date', week)
         .order('consistency_rank', { ascending: true }),
-      supabase.from('profiles').select('id,display_name,sex,rank_level').eq('role', 'participant'),
+      supabase.from('profiles').select('id,display_name,sex,rank_level,role'),
     ]);
-    const byId = new Map((people ?? []).map((p) => [p.id as string, p as { display_name: string; sex: Sex | null; rank_level: number }]));
+    const byId = new Map((people ?? []).map((p) => [p.id as string, p as { display_name: string; sex: Sex | null; rank_level: number; role: string }]));
     const next = ((scores as WeeklyScore[]) ?? []).map((s) => {
       const before = prevRanks.current.get(s.user_id);
       const move = before && s.consistency_rank ? before - s.consistency_rank : 0;
       const p = byId.get(s.user_id);
-      return { ...s, name: p?.display_name ?? 'Unknown', sex: p?.sex ?? null, rank_level: p?.rank_level ?? 1, move };
-    });
-    prevRanks.current = new Map(next.map((r) => [r.user_id, r.consistency_rank ?? 0]));
+      return { ...s, name: p?.display_name ?? 'Unknown', sex: p?.sex ?? null, rank_level: p?.rank_level ?? 1, move, mentor: p?.role === 'admin' };
+    })
+      // Points order, so a participating mentor sits where their score puts them (unranked)
+      .sort((x, y) => Number(y.total_points) - Number(x.total_points) || (x.consistency_rank ?? 99) - (y.consistency_rank ?? 99));
+    prevRanks.current = new Map(next.filter((r) => r.consistency_rank).map((r) => [r.user_id, r.consistency_rank!]));
     setRows(next);
   }, [week]);
 
@@ -53,10 +55,10 @@ export default function LeaderboardList({ week, meId }: { week: string; meId?: s
         const dots = r.finalized ? r.band_per_category : r.pace_band_per_category ?? r.band_per_category;
         return (
           <li key={r.user_id} className={`board-row ${r.is_top_this_week ? 'top' : ''} ${r.user_id === meId ? 'me' : ''}`}>
-            <span className="board-rank">{r.consistency_rank}</span>
+            <span className="board-rank">{r.mentor ? '–' : r.consistency_rank}</span>
             <div className="board-main">
               <div className="board-name">
-                <Emblem level={r.rank_level} sex={r.sex} size={22} />
+                {r.mentor ? <span className="level">Mentor</span> : <Emblem level={r.rank_level} sex={r.sex} size={22} />}
                 {r.name}
                 {r.user_id === meId && <span className="you">you</span>}
                 {r.is_top_this_week && <span className="level">Most consistent</span>}
