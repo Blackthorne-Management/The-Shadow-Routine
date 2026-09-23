@@ -4,6 +4,10 @@ import { formatDay } from '../lib/dates';
 import type { MonthStatus, MonthlyResult, Reward } from '../lib/types';
 import { Icon } from './Icon';
 
+// Month 1 includes the two prep weeks, so "Week 3 of 4" there is program week 1
+const weekLabel = (m: number, w: number) =>
+  m !== 1 ? `Week ${w} of 4` : w <= 2 ? `Prep week ${w}` : `Prep done · week ${w - 2} of 2`;
+
 /** "Month 2 · Week 3 of 4": Gold Month progress per goal, rewards, past months. */
 export default function MonthPanel({ month, rewards, results, onChange }: {
   month: MonthStatus | null; rewards: Reward[]; results: MonthlyResult[]; onChange: () => void;
@@ -32,7 +36,7 @@ export default function MonthPanel({ month, rewards, results, onChange }: {
           <div className="row between">
             <div>
               <p className="eyebrow">Program week {month.program_week} of 10 · {MONTH_WEEKS[month.month]}</p>
-              <p className="stat-label">Month {month.month} · Week {month.week_of_month} of 4</p>
+              <p className="stat-label">Month {month.month} · {weekLabel(month.month, month.week_of_month)}</p>
             </div>
             <span className="level gold">Gold Month</span>
           </div>
