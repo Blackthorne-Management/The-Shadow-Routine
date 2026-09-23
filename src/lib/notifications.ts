@@ -13,7 +13,7 @@ export const PARTICIPANT_PREFS: PrefDef[] = [
   { key: 'rewards', label: 'Rewards', hint: 'Gold Months and other rewards you earn', defaultOn: true },
   { key: 'direct_messages', label: 'Direct messages', hint: 'Someone messages you directly', defaultOn: true },
   { key: 'cohort_messages', label: 'Cohort chat', hint: 'New messages in your cohort', defaultOn: true },
-  { key: 'global_messages', label: 'Everyone chat', hint: 'New messages from all participants', defaultOn: false },
+  { key: 'global_messages', label: 'Global chat', hint: 'New messages from everyone, across cohorts', defaultOn: false },
 ];
 
 export const ADMIN_PREFS: PrefDef[] = [
@@ -22,7 +22,7 @@ export const ADMIN_PREFS: PrefDef[] = [
   { key: 'admin_proofs', label: 'Punishment proof', hint: 'Someone submits proof to review', defaultOn: true },
   { key: 'direct_messages', label: 'Direct messages', hint: 'Someone messages you directly', defaultOn: true },
   { key: 'cohort_messages', label: 'Cohort chat', hint: 'New messages in any cohort', defaultOn: true },
-  { key: 'global_messages', label: 'Everyone chat', hint: 'New messages in the all-participants channel', defaultOn: false },
+  { key: 'global_messages', label: 'Global chat', hint: 'New messages in the channel for all cohorts', defaultOn: false },
 ];
 
 export const prefOn = (prefs: Record<string, boolean> | null | undefined, d: PrefDef) => prefs?.[d.key] ?? d.defaultOn;

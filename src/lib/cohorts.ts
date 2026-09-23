@@ -27,3 +27,18 @@ export function useCohorts() {
   const mentorsOf = (cohortId: string) => links.filter((l) => l.cohort_id === cohortId).map((l) => l.user_id);
   return { cohorts, links, load, mentoredBy, mentorsOf };
 }
+
+/**
+ * The cohorts this person can look at: their own; for staff, also every cohort
+ * they mentor (Admins: all). `pick`/`setPick` switch between them.
+ */
+export function useViewCohorts(profile: { id: string; role: string; is_super_admin?: boolean; cohort_id: string | null } | null) {
+  const { cohorts, mentoredBy } = useCohorts();
+  const staff = profile?.role === 'admin';
+  const choices = (cohorts ?? []).filter((c) =>
+    c.id === profile?.cohort_id || (staff && (profile?.is_super_admin || mentoredBy(profile?.id).includes(c.id))));
+  const [pick, setPick] = useState<string | null>(null);
+  const current = pick ?? profile?.cohort_id ?? choices[0]?.id ?? null;
+  const names = new Map((cohorts ?? []).map((c) => [c.id, c.name]));
+  return { cohorts, choices, current, setPick, name: current ? names.get(current) ?? null : null, names };
+}

@@ -6,31 +6,24 @@ import { timeAgo } from '../lib/dates';
 import type { ChatMessage } from '../lib/types';
 import { Empty, ErrorText, TopBar } from '../components/ui';
 import { DirectList, Who, loadPeople, type Person } from './DirectMessages';
-import { isStaff, isSuperAdmin, staffLabel } from '../lib/roles';
-import { useCohorts } from '../lib/cohorts';
+import { isStaff, staffLabel } from '../lib/roles';
+import { useViewCohorts } from '../lib/cohorts';
 import { useDmUnread } from '../lib/badges';
 
 
 /**
- * Chat: your cohort, Everyone (all participants, for when there are several
- * cohorts), and Direct messages. Text only, live via Realtime. Staff can post
+ * Chat: Direct messages, your cohort, and Global (everyone, across cohorts). Text only, live via Realtime. Staff can post
  * anywhere and delete group messages.
  */
 export default function Chat() {
   const { profile } = useAuth();
   const isAdmin = isStaff(profile);
   // Staff can read every cohort they mentor (Admins: all); they pick which one
-  const { cohorts, mentoredBy } = useCohorts();
-  const chatCohorts = isAdmin
-    ? (cohorts ?? []).filter((c) => isSuperAdmin(profile) || mentoredBy(profile?.id).includes(c.id) || c.id === profile?.cohort_id)
-    : [];
-  const [pick, setPick] = useState<string | null>(null);
-  const cohort = pick ?? profile?.cohort_id ?? null;
+  const { choices: chatCohorts, current: cohort, setPick, name: cohortName } = useViewCohorts(profile);
   const [params, setParams] = useSearchParams();
   const tab = params.get('c');
   const channel: 'cohort' | 'global' | 'direct' = tab === 'global' ? 'global' : tab === 'direct' ? 'direct' : 'cohort';
   const unread = useDmUnread(profile?.id);
-  const cohortName = cohorts?.find((c) => c.id === cohort)?.name ?? null;
   const [messages, setMessages] = useState<ChatMessage[] | null>(null);
   const [members, setMembers] = useState<Map<string, Person>>(new Map());
   const [text, setText] = useState('');
@@ -91,11 +84,11 @@ export default function Chat() {
     <main className="screen with-tabs chat-screen">
       <TopBar pill={isAdmin ? `${staffLabel(profile)} view` : 'Chat'} />
       <div className="seg">
-        <button className={channel === 'cohort' ? 'on' : ''} onClick={() => setParams({})}>{cohortName ?? 'Cohort'}</button>
-        <button className={channel === 'global' ? 'on' : ''} onClick={() => setParams({ c: 'global' })}>Everyone</button>
         <button className={channel === 'direct' ? 'on' : ''} onClick={() => setParams({ c: 'direct' })}>
           Direct{unread > 0 && <> <span className="count-badge">{unread}</span></>}
         </button>
+        <button className={channel === 'cohort' ? 'on' : ''} onClick={() => setParams({})}>{cohortName ?? 'Cohort'}</button>
+        <button className={channel === 'global' ? 'on' : ''} onClick={() => setParams({ c: 'global' })}>Global</button>
       </div>
       {channel === 'cohort' && chatCohorts.length > 1 && (
         <select value={cohort ?? ''} onChange={(e) => setPick(e.target.value)} aria-label="Cohort">
@@ -104,7 +97,7 @@ export default function Chat() {
       )}
       {channel === 'direct' ? <DirectList /> : <>
       {!messages ? <div className="skeleton-list" /> : messages.length === 0 ? (
-        <Empty>{channel === 'cohort' ? `No messages yet. Say something to ${cohortName ?? 'your cohort'}.` : 'No messages yet. This channel reaches every participant.'}</Empty>
+        <Empty>{channel === 'cohort' ? `No messages yet. Say something to ${cohortName ?? 'your cohort'}.` : 'No messages yet. Global reaches everyone, across every cohort.'}</Empty>
       ) : (
         <ul className="chat-list">
           {messages.map((m) => {
@@ -131,7 +124,7 @@ export default function Chat() {
       <form className="chat-compose" onSubmit={send}>
         <ErrorText>{error}</ErrorText>
         <div className="row gap">
-          <input className="grow" value={text} maxLength={1000} placeholder={channel === 'cohort' ? `Message ${cohortName ?? 'your cohort'}` : 'Message everyone'}
+          <input className="grow" value={text} maxLength={1000} placeholder={channel === 'cohort' ? `Message ${cohortName ?? 'your cohort'}` : 'Message everyone (global)'}
             onChange={(e) => setText(e.target.value)} aria-label="Message" />
           <button className="btn primary" disabled={busy || !text.trim()}>Send</button>
         </div>
