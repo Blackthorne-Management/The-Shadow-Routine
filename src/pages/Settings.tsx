@@ -9,6 +9,7 @@ import { ErrorText, TopBar } from '../components/ui';
 import RankCard from '../components/RankCard';
 import Emblem from '../components/Emblem';
 import NotificationPrefs from '../components/NotificationPrefs';
+import AppearanceSettings from '../components/AppearanceSettings';
 import MentorParticipation from '../components/MentorParticipation';
 
 export default function Settings() {
@@ -59,6 +60,8 @@ export default function Settings() {
         <h2>{profile?.role === 'admin' ? 'Push notifications' : 'Reminders & push'}</h2>
         <ReminderSettings showTime={profile?.role === 'participant'} />
       </section>
+
+      <AppearanceSettings />
 
       <Link to="/how-it-works" className="list-row link-row">
         <span className="goal-icon sm"><span aria-hidden>?</span></span>
