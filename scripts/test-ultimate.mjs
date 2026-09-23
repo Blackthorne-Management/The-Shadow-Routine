@@ -36,6 +36,10 @@ assert.equal(b.nextCut, 2); assert.equal(b.keepAtNextCut, 50);
 assert.equal(b.inTheRunning.filter((s) => s.safe).length, 50);
 assert.deepEqual(b.schedule.map((s) => s.after), [100, 50, 50, 25, 25, 13, 7, 4, 2, 1], 'the published cut schedule');
 
+// Bracket columns: start + one per cut, all projected in week 1
+assert.deepEqual(b.stages.map((st) => st.people.length), [100, 50, 25, 13, 7, 4, 2, 1]);
+assert.deepEqual(b.stages.map((st) => st.done), [true, false, false, false, false, false, false, false]);
+
 // After week 2: 50 left, the rest eliminated in week 2
 b = buildBracket(people, rows, START, dayAfterWeek(2));
 assert.equal(b.inTheRunning.length, 50);
@@ -44,6 +48,8 @@ assert.ok(b.eliminated.every((s) => s.eliminatedWeek === 2));
 // After week 6: 13 left
 b = buildBracket(people, rows, START, dayAfterWeek(6));
 assert.equal(b.inTheRunning.length, 13);
+
+assert.deepEqual(b.stages.map((st) => [st.people.length, st.done]), [[100, true], [50, true], [25, true], [13, true], [7, false], [4, false], [2, false], [1, false]]);
 
 // After week 10: one winner, the most reliable people went deepest, the spiker went early
 b = buildBracket(people, rows, START, dayAfterWeek(10));

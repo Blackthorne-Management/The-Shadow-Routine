@@ -30,6 +30,8 @@ export interface Standing {
   eliminatedWeek: number | null;
 }
 export interface ScheduleWeek { week: number; cut: boolean; after: number; done: boolean }
+/** One column of the bracket: who's left after a cut (projected if it hasn't happened yet) */
+export interface Stage { label: string; week: number | null; people: Contender[]; done: boolean }
 export interface Bracket {
   currentWeek: number;           // 0 before week 1; 11 after week 10
   inTheRunning: Standing[];      // ranked, still eligible
@@ -38,6 +40,7 @@ export interface Bracket {
   nextCut: number | null;        // week of the next cut
   keepAtNextCut: number | null;  // how many stay at the next cut
   winner: Standing | null;
+  stages: Stage[];
 }
 
 const DAY = 86_400_000;
@@ -92,6 +95,7 @@ export function buildBracket(people: Contender[], rows: ContenderWeek[], start: 
 
   // Play out every cut that's already happened (its week is over)
   let field = [...people];
+  const stages: Stage[] = [{ label: 'Start', week: null, people: [...people].sort(order(Math.min(currentWeek, PROGRAM_WEEKS))), done: true }];
   const outAt = new Map<string, number>();
   const schedule: ScheduleWeek[] = [];
   let projected = people.length;
@@ -103,6 +107,7 @@ export function buildBracket(people: Contender[], rows: ContenderWeek[], start: 
       out.forEach((p) => outAt.set(p.id, w));
       field = kept;
       projected = field.length;
+      stages.push({ label: `Week ${w}`, week: w, people: kept, done: true });
     } else if (isCut && !done && projected > 1) {
       projected = keepCount(projected);
     }
@@ -131,5 +136,13 @@ export function buildBracket(people: Contender[], rows: ContenderWeek[], start: 
     .map((p) => standing(p, 0, false));
   const winner = field.length === 1 && outAt.size > 0 ? inTheRunning[0] : null;
 
-  return { currentWeek, inTheRunning, eliminated, schedule, nextCut, keepAtNextCut, winner };
+  // Cuts still to come: project from today's ranking
+  let next = ranked;
+  for (const w of CUT_WEEKS) {
+    if (stages.some((st) => st.week === w) || next.length <= 1) continue;
+    next = next.slice(0, keepCount(next.length));
+    stages.push({ label: `Week ${w}`, week: w, people: next, done: false });
+  }
+
+  return { currentWeek, inTheRunning, eliminated, schedule, nextCut, keepAtNextCut, winner, stages };
 }

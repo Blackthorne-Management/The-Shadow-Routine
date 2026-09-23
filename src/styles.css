@@ -784,3 +784,20 @@ h1 { font-weight: 600; letter-spacing: -0.025em; }
 .ult-tally strong { font-size: 22px; font-weight: 300; }
 .ult-cutline { display: flex; align-items: center; gap: 8px; color: var(--lav); font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 .ult-cutline::before, .ult-cutline::after { content: ""; flex: 1; height: 1px; background: var(--lav); }
+
+/* Ultimate: bracket view (columns narrowing to the winner) */
+.ult-bracket { display: flex; gap: 10px; overflow-x: auto; padding: 4px 2px 10px; margin: 0 -12px; padding-left: 12px; scroll-snap-type: x proximity; }
+.ult-col { flex: 0 0 132px; display: flex; flex-direction: column; gap: 6px; scroll-snap-align: start; align-self: center; }
+.ult-col:last-child { margin-right: 12px; }
+.ult-col-head { display: flex; flex-direction: column; padding: 0 2px; }
+.ult-col-head strong { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+.ult-col-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.ult-chip {
+  display: flex; align-items: center; gap: 6px; padding: 5px 8px; font-size: 12px;
+  border: 1px solid var(--ink-line); border-radius: var(--r-sm); background: var(--panel); color: var(--on-panel);
+}
+.ult-chip span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.ult-col.projected .ult-chip { border-style: dashed; }
+.ult-chip.cut { opacity: .4; }
+.ult-chip.me { outline: 2px solid var(--gold); outline-offset: 1px; }
+.ult-chip.final { border-color: var(--gold); box-shadow: 0 0 14px rgba(232, 185, 35, .25); font-weight: 700; }

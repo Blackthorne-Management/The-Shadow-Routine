@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 import { localDate } from '../lib/dates';
-import { CUT_WEEKS, GREEN_WEEK, buildBracket, type Bracket, type Contender, type Standing } from '../lib/ultimate';
+import { CUT_WEEKS, GREEN_WEEK, buildBracket, type Bracket, type Contender, type Stage, type Standing } from '../lib/ultimate';
 import { titleFor } from '../lib/ranks';
 import Emblem from '../components/Emblem';
 import { Icon } from '../components/Icon';
@@ -49,6 +49,44 @@ function Row({ s, cohort, me, showRank }: { s: Standing; cohort: CohortRow | und
   );
 }
 
+/**
+ * Bracket view: one column per stage, from the full field on the left down to
+ * one on the right. Past cuts are solid; cuts still to come are projected from
+ * today's ranking (dashed). In each column, whoever misses the next one is faded.
+ */
+function BracketView({ stages, me }: { stages: Stage[]; me: string | undefined }) {
+  return (
+    <section className="ult-round">
+      <div className="ult-round-head">
+        <h2>Bracket</h2>
+        <span className="small muted">scroll sideways · dashed = if it ended now</span>
+      </div>
+      <div className="ult-bracket">
+        {stages.map((st, i) => {
+          const next = new Set(stages[i + 1]?.people.map((p) => p.id) ?? []);
+          const last = i === stages.length - 1;
+          return (
+            <div key={st.label} className={`ult-col ${st.done ? 'done' : 'projected'}`}>
+              <div className="ult-col-head">
+                <strong>{last && st.people.length === 1 ? 'Winner' : st.label}</strong>
+                <span className="small muted">{st.people.length}{st.done ? '' : ' · projected'}</span>
+              </div>
+              <ol className="ult-col-list">
+                {st.people.map((p) => (
+                  <li key={p.id} className={`ult-chip ${!last && !next.has(p.id) ? 'cut' : ''} ${p.id === me ? 'me' : ''} ${last ? 'final' : ''}`}>
+                    <Emblem level={p.rank_level} sex={p.sex} size={16} />
+                    <span>{p.display_name.replace(/ \(test\)$/, '')}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 /** The Ultimate Shadow: one bracket of every participant; cohorts stay as they are. */
 export default function Ultimate() {
   const { profile } = useAuth();
@@ -56,6 +94,7 @@ export default function Ultimate() {
   const [cohorts, setCohorts] = useState<Map<string, CohortRow>>(new Map());
   const [showRules, setShowRules] = useState(false);
   const [showOut, setShowOut] = useState(false);
+  const [view, setView] = useState<'list' | 'bracket'>('list');
 
   useEffect(() => {
     let live = true;
@@ -130,7 +169,14 @@ export default function Ultimate() {
         </ol>
       </section>
 
-      <section className="ult-round">
+      <div className="seg" role="tablist" aria-label="View">
+        <button className={view === 'list' ? 'on' : ''} onClick={() => setView('list')}>List</button>
+        <button className={view === 'bracket' ? 'on' : ''} onClick={() => setView('bracket')}>Bracket</button>
+      </div>
+
+      {view === 'bracket' && <BracketView stages={bracket.stages} me={me} />}
+
+      {view === 'list' && <section className="ult-round">
         <div className="ult-round-head">
           <h2>In the running</h2>
           <span className="small muted">{inTheRunning.length} left</span>
@@ -147,11 +193,11 @@ export default function Ultimate() {
             </Fragment>
           ))}
         </ol>
-      </section>
+      </section>}
 
-      {eliminated.length > 0 && (
+      {view === 'list' && eliminated.length > 0 && (
         <section className="ult-round">
-          <button className="ult-round-head link-row" style={{ background: 'none', border: 0, padding: '0 4px', width: '100%' }}
+          <button className="ult-round-head" style={{ background: 'none', border: 0, padding: '0 4px', width: '100%', color: 'inherit' }}
             onClick={() => setShowOut((v) => !v)}>
             <h2>Eliminated</h2><span className="small muted">{eliminated.length}</span>
             <span aria-hidden style={{ marginLeft: 'auto' }}>{showOut ? '−' : '+'}</span>
@@ -167,7 +213,7 @@ export default function Ultimate() {
       )}
 
       <section className="card">
-        <button className="row between link-row" style={{ background: 'none', border: 0, padding: 0, width: '100%' }} onClick={() => setShowRules((v) => !v)}>
+        <button className="row between" style={{ background: 'none', border: 0, padding: 0, width: '100%', color: 'inherit' }} onClick={() => setShowRules((v) => !v)}>
           <h2>How it works</h2><span aria-hidden>{showRules ? '−' : '+'}</span>
         </button>
         {showRules && (
