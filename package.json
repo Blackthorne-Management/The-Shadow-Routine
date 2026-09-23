@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "icons": "node scripts/gen-icons.mjs",
     "test:sql": "node scripts/test-sql.mjs",
-    "vapid": "web-push generate-vapid-keys"
+    "vapid": "web-push generate-vapid-keys",
+    "emblems": "node scripts/cut-emblems.mjs"
   },
   "dependencies": {
     "@fontsource-variable/inter-tight": "^5.3.0",

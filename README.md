@@ -36,7 +36,7 @@ Rules that matter for fairness run **in Postgres**, not the browser:
 - **Ranks** (`…09_ranks_emblems_chat.sql`). `cumulative_cycle_points` is the sum of every program week's `total_points` (max 10 × 1,049 = 10,490). It's separate from the weekly leaderboard and kept in sync by a trigger on `weekly_scores`.
   - 10 ranks, from Shadow Initiate (0) to The Eclipse (exactly 10,490). Levels 3–9 use male or female titles, chosen at signup; existing accounts pick once.
   - Crossing a threshold on check-in shows a Level Up screen.
-  - Emblem art goes in `public.emblems.image_url`; until then a placeholder shield is drawn.
+  - Emblem art: source art goes in `/Emblems` (one file per title, e.g. `Ronin.jpg`). `npm run emblems` cuts each round emblem out of its checkerboard background into a transparent 512px WebP in `public/emblems/`. `public.emblems.image_url` points at it (`…14_female_titles_emblem_art.sql`). Any rank without art shows a placeholder shield.
 - **Cohort chat:** a `messages` table scoped to `cohort_id` (one cohort today), live via Realtime. Members post as themselves into their own cohort. The mentor can post (labelled Mentor) and delete; nobody edits.
 - **Notifications** (`…10_notifications_global_chat.sql`). App events call `notify()`, which writes to the `notifications` inbox (the bell), only if the recipient's preference for that type is on. A trigger then pushes each new row immediately through `send-reminders` with `{notification_id}`.
   - Participants hear about: approval, workout reviews, punishments, proof reviews, rewards, cohort chat and Everyone chat, plus the nightly reminder.

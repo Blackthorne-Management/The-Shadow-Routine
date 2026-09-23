@@ -503,4 +503,12 @@ assert.deepEqual(Object.keys(pc).sort(), ['approvals', 'proofs', 'workouts']);
 await assert.rejects(as(U1, `select admin_pending_counts()`), /ADMIN_ONLY/);
 console.log('✓ admins vs mentors, direct messages, pending counts');
 
+// --- Female titles + emblem art --------------------------------------------------
+assert.equal((await one(`select title from emblems where rank_level=3 and path='female'`)).title, 'Shadow Oracle');
+assert.equal((await one(`select title from emblems where rank_level=7 and path='female'`)).title, 'Shadow Assassin');
+assert.equal((await one(`select image_url from emblems where rank_level=9 and path='male'`)).image_url, '/emblems/king.webp');
+assert.equal((await one(`select image_url from emblems where rank_level=1 and path='female'`)).image_url, '/emblems/initiate.webp');
+assert.equal((await one(`select image_url from emblems where rank_level=3 and path='female'`)).image_url, null);
+console.log('✓ female titles, emblem art');
+
 console.log('\nAll SQL tests passed.');
