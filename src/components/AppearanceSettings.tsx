@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { getThemePref, setThemePref, type ThemePref } from '../lib/theme';
 
 const OPTIONS: { value: ThemePref; label: string }[] = [
-  { value: 'system', label: 'Phone' },
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' },
 ];
@@ -13,7 +12,7 @@ export default function AppearanceSettings() {
     <section className="card">
       <div>
         <h2>Appearance</h2>
-        <p className="hint">Phone matches your phone's light or dark mode.</p>
+        <p className="hint">Light is the default. Dark is remembered on this device.</p>
       </div>
       <div className="seg" role="radiogroup" aria-label="Theme">
         {OPTIONS.map((o) => (

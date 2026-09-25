@@ -1,29 +1,25 @@
-// Light / dark theme. The choice lives on this device (localStorage); "system"
-// follows the phone. index.html applies it before first paint to avoid a flash.
-export type ThemePref = 'system' | 'light' | 'dark';
-const KEY = 'theme';
-const media = () => window.matchMedia('(prefers-color-scheme: light)');
+// Light / dark theme. Light is the default; dark is the alternative, chosen in
+// Me → Appearance and remembered on this device. theme-init.js applies it
+// before first paint to avoid a flash.
+//
+// The storage key is versioned: bumping it resets everyone to the default
+// (it went to 'theme-v2' when light became the default for all).
+export type ThemePref = 'light' | 'dark';
+export const THEME_KEY = 'theme-v2';
 
 export function getThemePref(): ThemePref {
-  try {
-    const v = localStorage.getItem(KEY);
-    return v === 'light' || v === 'dark' ? v : 'system';
-  } catch { return 'system'; }
+  try { return localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light'; } catch { return 'light'; }
 }
 
 export function applyTheme(pref: ThemePref = getThemePref()) {
-  const theme = pref === 'system' ? (media().matches ? 'light' : 'dark') : pref;
-  const root = document.documentElement;
-  root.dataset.theme = theme;
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'light' ? '#ebe5d8' : '#000000');
+  document.documentElement.dataset.theme = pref;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', pref === 'light' ? '#ebe5d8' : '#000000');
 }
 
 export function setThemePref(pref: ThemePref) {
-  try { if (pref === 'system') localStorage.removeItem(KEY); else localStorage.setItem(KEY, pref); } catch { /* private mode */ }
+  try {
+    if (pref === 'light') localStorage.removeItem(THEME_KEY); else localStorage.setItem(THEME_KEY, pref);
+    localStorage.removeItem('theme'); // the old key (phone-matching era)
+  } catch { /* private mode */ }
   applyTheme(pref);
-}
-
-/** Keep "system" in sync when the phone switches light/dark. */
-export function watchSystemTheme() {
-  media().addEventListener('change', () => { if (getThemePref() === 'system') applyTheme('system'); });
 }
